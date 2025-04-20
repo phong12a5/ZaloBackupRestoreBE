@@ -1,0 +1,49 @@
+services:
+  mongodb:
+    build:
+      context: ./mongodb
+      dockerfile: Dockerfile.mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./mongo-data:/data/db
+    networks:
+      - app-network
+  
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/authdb?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/userdb?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+# volumes:
+#   mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge
