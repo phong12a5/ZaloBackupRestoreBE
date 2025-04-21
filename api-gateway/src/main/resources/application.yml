@@ -1,6 +1,11 @@
 server:
   port: 8080
 
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.server: DEBUG
+
 spring:
   cloud:
     gateway:
@@ -17,15 +22,18 @@ spring:
           predicates:
             - Path=/users/**
 
-      default-filters:
-        - AddResponseHeader=X-Response-Time, "#{T(java.time.Instant).now()}"
+      # default-filters:
+      #   - AddResponseHeader=X-Response-Time, "#{T(java.time.Instant).now()}"
 
-    discovery:
-      locator:
-        enabled: true
+    # discovery:
+    #   locator:
+    #     enabled: true
+  data:
+    mongodb:
+      uri: mongodb://admin:password@mongodb:27017/userdb
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
+# management:
+#   endpoints:
+#     web:
+#       exposure:
+#         include: "*"

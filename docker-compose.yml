@@ -10,7 +10,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
-      - ./mongo-data:/data/db
+      - ./mongodb/mongo-data:/data/db
     networks:
       - app-network
       
@@ -24,6 +24,8 @@ services:
     depends_on:
       - auth-service
       - user-service
+    networks:
+      - app-network
   
   auth-service:
     build:
