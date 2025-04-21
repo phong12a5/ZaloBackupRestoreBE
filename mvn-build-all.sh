@@ -11,6 +11,8 @@ build_service() {
   fi
   cd - || exit
 }
+# Build api-gateway
+build_service "./api-gateway"
 
 # Build auth-service
 build_service "./auth-service"

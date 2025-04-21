@@ -13,9 +13,11 @@ services:
       - ./mongo-data:/data/db
     networks:
       - app-network
+      
   api-gateway:
     build:
       context: ./api-gateway
+      dockerfile: Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
