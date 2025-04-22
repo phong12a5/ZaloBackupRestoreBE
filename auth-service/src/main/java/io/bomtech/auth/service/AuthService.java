@@ -5,6 +5,7 @@ import io.bomtech.auth.model.User;
 import io.bomtech.auth.repository.UserRepository;
 import io.bomtech.auth.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value; // Import @Value
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -20,7 +21,8 @@ public class AuthService {
     @Autowired
     private WebClient.Builder webClientBuilder;
 
-    private final String userServiceUrl = "http://user-service:8082"; // Get from config later
+    @Value("${user.service.url}") // Inject value from application.yml
+    private String userServiceUrl; // Remove hardcoded value
     
     public void register(User user) {
         // 1. Save user in auth-service database

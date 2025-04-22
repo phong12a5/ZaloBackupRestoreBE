@@ -9,3 +9,7 @@ spring:
   data:
     mongodb:
       uri: mongodb://admin:password@mongodb:27017/authdb
+
+user:
+  service:
+    url: http://user-service:8082
