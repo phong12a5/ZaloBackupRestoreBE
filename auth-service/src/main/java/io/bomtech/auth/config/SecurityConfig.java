@@ -13,7 +13,7 @@ public class SecurityConfig {
         http
         .csrf().disable() // Disable cs
         .authorizeHttpRequests()
-            .requestMatchers("/auth/register", "/auth/login").permitAll() // Cho phép endpoint /auth/register không cần xác thực
+            .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll() // Cho phép endpoint /auth/register không cần xác thực
             .anyRequest().authenticated(); // Các yêu cầu khác cần xác thực
         return http.build();
     }
