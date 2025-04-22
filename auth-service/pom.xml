@@ -53,6 +53,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Spring Boot WebFlux (for WebClient) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- JWT Library -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

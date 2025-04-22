@@ -14,4 +14,9 @@ public class UserService {
     public User getUserById(String id) {
         return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
     }
+
+    public User createUser(User user) {
+        // Add any validation or business logic here if needed
+        return userRepository.save(user);
+    }
 }

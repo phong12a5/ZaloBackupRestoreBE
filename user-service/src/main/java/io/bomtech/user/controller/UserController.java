@@ -17,4 +17,10 @@ public class UserController {
     public ResponseEntity<?> getUser(@PathVariable String id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
+
+    @PostMapping
+    public ResponseEntity<?> createUser(@RequestBody User user) {
+        User createdUser = userService.createUser(user);
+        return ResponseEntity.ok(createdUser);
+    }
 }
