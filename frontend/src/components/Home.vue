@@ -13,8 +13,9 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const logout = () => {
-  // Clear authentication token (example using localStorage)
+  // Clear authentication and refresh tokens
   localStorage.removeItem('authToken');
+  localStorage.removeItem('refreshToken');
   // Redirect to login page
   router.push('/login');
 };
