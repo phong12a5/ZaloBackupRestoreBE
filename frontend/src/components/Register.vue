@@ -31,6 +31,7 @@
     <script setup lang="ts">
     import { ref } from 'vue';
     import { useRouter } from 'vue-router'; // Import useRouter
+    import apiClient from '../api/axios'; // Import the configured Axios instance
 
     const username = ref('');
     const password = ref('');
@@ -44,31 +45,20 @@
       loading.value = true;
       error.value = null;
       try {
-        // Assume API Gateway proxies /auth/register (Removed /api)
-        const response = await fetch('http://localhost:8080/auth/register', { // Adjust endpoint if needed
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: username.value,
-            password: password.value,
-            // email: email.value, // Include other fields if added
-          }),
+        // Use apiClient instead of fetch
+        const response = await apiClient.post('/auth/register', { // Use relative path
+          username: username.value,
+          password: password.value,
+          // email: email.value, // Include other fields if added
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Registration failed. Please try again.' }));
-          throw new Error(errorData.message || 'Registration failed');
-        }
-
-        // Handle successful registration
-        console.log('Registration successful');
+        // Axios automatically throws for non-2xx responses, so no need for !response.ok check
+        console.log('Registration successful', response.data);
         alert('Registration successful! Please login.');
-        router.push('/login'); // Redirect to login page after successful registration
+        router.push('/login');
 
       } catch (err: any) {
-        error.value = err.message || 'An error occurred during registration.';
+        error.value = err.response?.data?.message || err.message || 'An error occurred during registration.';
         console.error('Registration error:', err);
       } finally {
         loading.value = false;

@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router'; // Import useRouter
+import apiClient from '../api/axios'; // Import the configured Axios instance
 
 const username = ref('');
 const password = ref('');
@@ -35,42 +36,30 @@ const handleLogin = async () => {
   loading.value = true;
   error.value = null;
   try {
-    // Assume API Gateway is running on localhost:8080
-    // and proxies /auth/login to the auth service (Removed /api)
-    const response = await fetch('http://localhost:8080/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value,
-      }),
+    // Use apiClient instead of fetch
+    const response = await apiClient.post('/auth/login', { // Use relative path
+      username: username.value,
+      password: password.value,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Login failed. Please check your credentials.' }));
-      throw new Error(errorData.message || 'Login failed');
-    }
-
-    const data = await response.json();
-    // Handle successful login (e.g., store token, redirect)
+    const data = response.data; // Axios wraps response in 'data'
     console.log('Login successful:', data);
-    // Store the token in localStorage
-    if (data.token) {
-      localStorage.setItem('authToken', data.token);
-      // Redirect to the home page
+
+    // Store both tokens
+    if (data.accessToken && data.refreshToken) {
+      localStorage.setItem('authToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken); // Store refresh token
       router.push('/home');
     } else {
-      // Handle case where token is missing in response
-      throw new Error('Login successful, but no token received.');
+      throw new Error('Login successful, but tokens are missing in response.');
     }
 
   } catch (err: any) {
-    error.value = err.message || 'An error occurred during login.';
+    // Axios error handling might differ slightly
+    error.value = err.response?.data?.message || err.message || 'An error occurred during login.';
     console.error('Login error:', err);
-    // Clear any potentially stale token on login failure
     localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken'); // Clear refresh token on failure too
   } finally {
     loading.value = false;
   }
