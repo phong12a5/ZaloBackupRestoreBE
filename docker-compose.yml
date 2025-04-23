@@ -54,6 +54,19 @@ services:
       - mongodb
     networks:
       - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-app
+    ports:
+      - "80:80" # Map host port 80 to container port 80 (Nginx default)
+    networks:
+      - app-network
+    # depends_on: # Optional: Uncomment if frontend needs gateway to be ready
+    #   - api-gateway 
+
 # volumes:
 #   mongodb_data:
 
