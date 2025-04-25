@@ -21,3 +21,9 @@ build_service "./auth-service"
 build_service "./user-service"
 
 echo "All services built successfully!"
+
+docker-compose down
+
+docker-compose up --build -d
+
+echo "Docker containers are up and running!"

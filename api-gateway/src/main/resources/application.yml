@@ -7,6 +7,8 @@ logging:
     reactor.netty.http.server: DEBUG
 
 spring:
+  application:
+    name: api-gateway
   cloud:
     gateway:
       routes:
@@ -22,15 +24,28 @@ spring:
           predicates:
             - Path=/users/**
 
-      # default-filters:
-      #   - AddResponseHeader=X-Response-Time, "#{T(java.time.Instant).now()}"
+      globalcors: # Add this section for global CORS configuration
+        corsConfigurations:
+          '[/**]': # Apply CORS to all paths
+            allowedOrigins: "http://localhost" # Allow requests from your frontend origin
+            allowedMethods: # Allow specific HTTP methods
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS # OPTIONS is crucial for preflight requests
+            allowedHeaders: # Allow specific headers
+              - Content-Type
+              - Authorization # Allow Authorization header for JWT
+            allowCredentials: true # Allow cookies/credentials if needed (optional)
+            maxAge: 3600 # Cache preflight response for 1 hour (optional)
 
-    # discovery:
-    #   locator:
-    #     enabled: true
   data:
     mongodb:
       uri: mongodb://admin:password@mongodb:27017/userdb
+
+jwt:
+  secret: your-very-secure-secret-key-needs-to-be-long-and-complex
 
 # management:
 #   endpoints:
