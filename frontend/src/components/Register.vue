@@ -58,8 +58,16 @@
         router.push('/login');
 
       } catch (err: any) {
-        error.value = err.response?.data?.message || err.message || 'An error occurred during registration.';
+        // Extract the specific error message from the backend response
+        const apiErrorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'An error occurred during registration.';
+
+        // Set the inline error message
+        error.value = apiErrorMessage;
         console.error('Registration error:', err);
+
+        // Show the specific API error message in the alert popup
+        alert(`Registration failed: ${apiErrorMessage}`);
+
       } finally {
         loading.value = false;
       }

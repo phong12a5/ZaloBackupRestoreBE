@@ -80,8 +80,13 @@ if [ "$BUILD_ALL" = true ]; then
 elif [ -n "$SERVICE_TO_BUILD" ]; then
   echo "Building specific service: $SERVICE_TO_BUILD..."
   if [ -d "./$SERVICE_TO_BUILD" ]; then
-    build_service "./$SERVICE_TO_BUILD"
-    echo "$SERVICE_TO_BUILD built successfully!"
+    # if is frontend or mongoDB, skip build
+    if [ "$SERVICE_TO_BUILD" = "frontend" ] || [ "$SERVICE_TO_BUILD" = "mongoDB" ]; then
+      echo "Skipping build for $SERVICE_TO_BUILD."
+    else
+      build_service "./$SERVICE_TO_BUILD"
+      echo "$SERVICE_TO_BUILD built successfully!"
+    fi
   else
     echo "Error: Service directory './$SERVICE_TO_BUILD' not found."
     exit 1

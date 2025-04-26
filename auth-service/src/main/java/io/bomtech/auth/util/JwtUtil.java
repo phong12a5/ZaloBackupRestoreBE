@@ -45,4 +45,14 @@ public class JwtUtil {
             throw new RuntimeException("Invalid JWT token");
         }
     }
+
+    // Add this method to get username without full validation exception handling
+    public String getUsernameFromToken(String token) {
+         Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+         return claims.getSubject();
+    }
 }

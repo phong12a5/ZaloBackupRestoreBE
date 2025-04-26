@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 @Service
 public class AuthService {
     @Autowired
@@ -25,6 +27,10 @@ public class AuthService {
     private String userServiceUrl; // Remove hardcoded value
     
     public void register(User user) {
+        // Check if username already exists
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
         // 1. Save user in auth-service database
         User savedUser = userRepository.save(user);
 
@@ -53,5 +59,10 @@ public class AuthService {
 
     public String generateRefreshToken(String username) {
         return jwtUtil.generateRefreshToken(username);
+    }
+
+    // Add this method
+    public Optional<User> findUserByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 }
