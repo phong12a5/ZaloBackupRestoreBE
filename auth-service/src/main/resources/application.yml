@@ -21,3 +21,6 @@ eureka:
     register-with-eureka: true
   instance:
     prefer-ip-address: true # Important in containerized environments
+
+jwt:
+  secret: y8J3nD9kL2pQ5xR7vT1wZ6mB4aF8oC0sE3uH9gK7tV2qX5r # MUST be the same as in api-gateway
