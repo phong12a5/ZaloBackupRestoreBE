@@ -9,38 +9,9 @@ print_header() {
 
 # Step 1: Build the Maven project
 print_header "Building Maven Project"
-./mvn-build-all.sh
+./build.sh -a
 if [ $? -ne 0 ]; then
   echo "Maven build failed. Exiting..."
-  exit 1
-fi
-
-# Step 2: Build Docker images using Docker Compose
-print_header "Building Docker Images"
-docker-compose -f docker-compose.yml build --no-cache
-if [ $? -ne 0 ]; then
-  echo "Docker build failed. Exiting..."
-  exit 1
-fi
-
-# Step 3: Stop all running containers if there are 1 or more 
-print_header "Stopping Running Containers"
-running_containers=$(docker ps -q)
-if [ -n "$running_containers" ]; then
-  docker stop $running_containers
-  if [ $? -ne 0 ]; then
-    echo "Failed to stop running containers. Exiting..."
-    exit 1
-  fi
-else
-  echo "No running containers to stop."
-fi
-
-# Step 4: Restart containers using Docker Compose
-print_header "Restarting Containers"
-docker-compose -f docker-compose.yml up -d
-if [ $? -ne 0 ]; then
-  echo "Failed to restart containers. Exiting..."
   exit 1
 fi
 
