@@ -1,5 +1,6 @@
 package io.bomtech.auth.controller;
 
+import io.bomtech.auth.dto.RegisterRequest; // Import the new DTO
 import io.bomtech.auth.model.User;
 import io.bomtech.auth.service.AuthService;
 import io.bomtech.auth.util.JwtUtil;
@@ -23,11 +24,9 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
         try {
-            // Mã hóa mật khẩu trước khi đăng ký (NÊN LÀM)
-            // user.setPassword(passwordEncoder.encode(user.getPassword()));
-            authService.register(user);
+            authService.register(registerRequest);
             // Trả về 200 OK nếu đăng ký thành công
             return ResponseEntity.ok(Map.of("message", "User registered successfully"));
         } catch (IllegalArgumentException e) {

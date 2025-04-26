@@ -7,12 +7,16 @@
             <input type="text" id="username" v-model="username" required />
           </div>
           <!-- Add other fields like email if needed -->
-          <!--
+          
           <div class="form-group">
             <label for="email">Email:</label>
             <input type="email" id="email" v-model="email" required />
           </div>
-          -->
+          <div class="form-group">
+            <label for="fullname">Full Name:</label>
+            <input type="text" id="fullname" v-model="fullname" required />
+          </div>
+          
           <div class="form-group">
             <label for="password">Password:</label>
             <input type="password" id="password" v-model="password" required />
@@ -36,7 +40,8 @@
     const username = ref('');
     const password = ref('');
     // Add other fields if needed, e.g., email
-    // const email = ref('');
+    const email = ref('');
+    const fullname = ref(''); // Add fullname ref
     const error = ref<string | null>(null);
     const loading = ref(false);
     const router = useRouter(); // Get router instance
@@ -49,7 +54,8 @@
         const response = await apiClient.post('/auth/register', { // Use relative path
           username: username.value,
           password: password.value,
-          // email: email.value, // Include other fields if added
+          email: email.value, // Include other fields if added
+          fullname: fullname.value // Include fullname
         });
 
         // Axios automatically throws for non-2xx responses, so no need for !response.ok check
