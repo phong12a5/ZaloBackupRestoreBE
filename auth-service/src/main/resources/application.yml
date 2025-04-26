@@ -6,10 +6,18 @@ logging:
     org.springframework.security: DEBUG
 
 spring:
+  application:
+    name: auth-service
   data:
     mongodb:
       uri: mongodb://admin:password@mongodb:27017/authdb
 
-user:
-  service:
-    url: http://user-service:8082
+eureka:
+  client:
+    serviceUrl:
+      # This will be overridden by the environment variable in docker-compose
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true # Important in containerized environments

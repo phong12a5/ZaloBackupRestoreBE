@@ -1,4 +1,12 @@
 services:
+  eureka-server:
+    image: steeltoeoss/eureka-server:latest # Try Steeltoe OSS Eureka Server image
+    container_name: eureka-server
+    ports:
+      - "8761:8761" # Default Eureka port
+    networks:
+      - app-network
+
   mongodb:
     build:
       context: ./mongodb
@@ -21,9 +29,10 @@ services:
     container_name: api-gateway
     ports:
       - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/ # Tell api-gateway where Eureka is
     depends_on:
-      - auth-service
-      - user-service
+      - eureka-server
     networks:
       - app-network
   
@@ -36,8 +45,10 @@ services:
       - "8081:8081"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/authdb?authSource=admin
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/ # Tell auth-service where Eureka is
     depends_on:
       - mongodb
+      - eureka-server
     networks:
       - app-network
 
@@ -50,8 +61,10 @@ services:
       - "8082:8082"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/userdb?authSource=admin
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/ # Tell user-service where Eureka is
     depends_on:
       - mongodb
+      - eureka-server
     networks:
       - app-network
 

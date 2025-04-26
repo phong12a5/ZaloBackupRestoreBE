@@ -5,7 +5,6 @@ import io.bomtech.auth.model.User;
 import io.bomtech.auth.repository.UserRepository;
 import io.bomtech.auth.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value; // Import @Value
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -22,10 +21,6 @@ public class AuthService {
 
     @Autowired
     private WebClient.Builder webClientBuilder;
-
-    @Value("${user.service.url}") // Inject value from application.yml
-    private String userServiceUrl; // Remove hardcoded value
-    
     public void register(User user) {
         // Check if username already exists
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
@@ -40,10 +35,11 @@ public class AuthService {
         userServiceUser.setUsername(savedUser.getUsername());
         userServiceUser.setEmail(savedUser.getEmail());
 
-        // 3. Send user data to user-service asynchronously
+        // 3. Send user data to user-service asynchronously using load balancer URI
         webClientBuilder.build()
                 .post()
-                .uri(userServiceUrl + "/users")
+                // Use the service name registered with Eureka
+                .uri("lb://user-service/users")
                 .body(Mono.just(userServiceUser), io.bomtech.auth.model.User.class)
                 .retrieve()
                 .bodyToMono(Void.class) // Or handle response if needed

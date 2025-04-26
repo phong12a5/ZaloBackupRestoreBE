@@ -2,58 +2,63 @@
 
 # Default values
 BUILD_ALL=false
+BUILD_SERVICE=true
 SERVICE_TO_BUILD=""
 
 # --- Use getopt to parse options ---
-# Define short options: 'a' (no argument needed)
-# Define long options: 'all' (no argument needed)
-# ' -- ' separates options from non-option arguments
-# "$@" passes all script arguments to getopt
-TEMP=$(getopt -o a --long all -n 'mvn-build-all.sh' -- "$@")
-
-# Check if getopt ran successfully
-if [ $? != 0 ]; then
-    echo "Terminating..." >&2
-    exit 1
-fi
-
-# Note the quotes around '$TEMP': they are essential!
-eval set -- "$TEMP"
-# --- End of getopt parsing setup ---
-
 # --- Process parsed options ---
-while true; do
-    case "$1" in
-        -a | --all) # Handle -a or --all
+usage() {
+    echo "Usage: $0 [-a | --all] [-s | --skip] [service_name]"
+    echo "Options:"
+    echo "  -a, --all       Build all services (default if no service name is provided)"
+    echo "  -s, --skip      Skip building the service"
+    exit 1
+}
+
+while getopts ":as" opt; do
+    case $opt in
+        a)
             BUILD_ALL=true
-            shift # Consume the option
             ;;
-        --) # End of options
-            shift # Consume '--'
-            break # Exit loop
+        s)
+            BUILD_SERVICE=false
             ;;
-        *) # Should not happen with getopt
-            echo "Internal error!"
-            exit 1
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
             ;;
     esac
 done
+shift $((OPTIND-1)) # Shift processed options away
 # --- End of option processing ---
 
 # --- Process non-option arguments (service name) ---
-# Any remaining arguments ($1, $2, etc.) are non-option arguments
-if [ $# -gt 0 ] && [ "$BUILD_ALL" = false ]; then
-    # If we are not building all, the first non-option arg is the service name
-    SERVICE_TO_BUILD=$1
-    echo "Service specified: $SERVICE_TO_BUILD"
-    # You might want to add a check here if more than one service name is provided
-    if [ $# -gt 1 ]; then
-        echo "Warning: Multiple service names provided, only using the first one ('$SERVICE_TO_BUILD')."
+if [ "$BUILD_ALL" = false ]; then
+    # If -a is not set, a service name is required
+    if [ $# -eq 0 ]; then
+        echo "Error: Service name is required when '-a' is not specified." >&2
+        usage # Call the usage function which exits
+    else
+        # If -a is not set AND arguments exist, take the first as service name
+        SERVICE_TO_BUILD=$1
+        echo "Service specified: $SERVICE_TO_BUILD"
+        if [ $# -gt 1 ];then
+            echo "Warning: Multiple service names provided, only using the first one ('$SERVICE_TO_BUILD')."
+        fi
     fi
-elif [ $# -eq 0 ] && [ "$BUILD_ALL" = false ]; then
-    # No arguments and -a not specified: default to build all
-    echo "No specific service or '-a' option provided. Building all services (default)."
-    BUILD_ALL=true
+elif [ "$BUILD_ALL" = true ]; then
+    # If -a is set
+    if [ $# -gt 0 ]; then
+        # If -a is set, ignore any service name provided
+        echo "Warning: Service name '$1' provided but '-a' option is set. Building all services."
+    else
+        # -a is set and no other arguments, proceed to build all
+        echo "Building all services..."
+    fi
 fi
 # --- End of argument processing ---
 
@@ -73,10 +78,13 @@ build_service() {
 # Build specific service or all services
 if [ "$BUILD_ALL" = true ]; then
   echo "Building all services..."
-  build_service "./api-gateway"
-  build_service "./auth-service"
-  build_service "./user-service"
-  echo "All services built successfully!"
+  if [ "$BUILD_SERVICE" = true ]; then
+    echo "Building service..."
+    build_service "./api-gateway"
+    build_service "./auth-service"
+    build_service "./user-service"
+    echo "All services built successfully!"
+  fi
 elif [ -n "$SERVICE_TO_BUILD" ]; then
   echo "Building specific service: $SERVICE_TO_BUILD..."
   if [ -d "./$SERVICE_TO_BUILD" ]; then
@@ -84,8 +92,10 @@ elif [ -n "$SERVICE_TO_BUILD" ]; then
     if [ "$SERVICE_TO_BUILD" = "frontend" ] || [ "$SERVICE_TO_BUILD" = "mongoDB" ]; then
       echo "Skipping build for $SERVICE_TO_BUILD."
     else
-      build_service "./$SERVICE_TO_BUILD"
-      echo "$SERVICE_TO_BUILD built successfully!"
+      if [ "$BUILD_SERVICE" = true ]; then
+        build_service "./$SERVICE_TO_BUILD"
+        echo "$SERVICE_TO_BUILD built successfully!"
+      fi
     fi
   else
     echo "Error: Service directory './$SERVICE_TO_BUILD' not found."

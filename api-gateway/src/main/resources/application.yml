@@ -16,21 +16,30 @@ spring:
   cloud:
     gateway:
       routes:
-        # Route to auth-service
+        # Route to auth-service using Load Balancer
         - id: auth-service
-          uri: http://auth-service:8081
+          uri: lb://auth-service
           predicates:
             - Path=/auth/**
 
-        # Route to user-service
+        # Route to user-service using Load Balancer
         - id: user-service
-          uri: http://user-service:8082
+          uri: lb://user-service
           predicates:
             - Path=/users/**
 
   data:
     mongodb:
       uri: mongodb://admin:password@mongodb:27017/userdb
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true # API Gateway can also register itself if needed
+  instance:
+    prefer-ip-address: true # Important in containerized environments
 
 jwt:
   secret: your-very-secure-secret-key-needs-to-be-long-and-complex
