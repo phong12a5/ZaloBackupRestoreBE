@@ -13,7 +13,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(exchange -> exchange
                 .pathMatchers("/auth/login", "/auth/register", "/auth/refresh").permitAll()
-                .anyExchange().authenticated()
+                .anyExchange().permitAll() // Cho phép mọi request, ủy quyền xác thực cho AuthenticationFilter
             );
         return http.build();
     }

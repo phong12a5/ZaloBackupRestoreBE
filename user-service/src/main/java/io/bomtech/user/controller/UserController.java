@@ -23,4 +23,14 @@ public class UserController {
         User createdUser = userService.createUser(user);
         return ResponseEntity.ok(createdUser);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@RequestHeader("X-User-Name") String username) {
+        return userService.getUserByUsername(username)
+            .map(user -> {
+                // Trả về thông tin an toàn, không trả về password
+                return ResponseEntity.ok(new UserSafeDto(user.getId(), user.getUsername()));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 }

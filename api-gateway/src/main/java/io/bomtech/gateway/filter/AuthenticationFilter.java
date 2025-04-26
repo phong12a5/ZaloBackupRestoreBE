@@ -61,14 +61,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         // Optional: Add username or claims to request headers for downstream services
-        // String username = jwtUtil.getUsernameFromToken(jwt);
-        // ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-        //        .header("X-User-Name", username)
-        //        .build();
-        // ServerWebExchange modifiedExchange = exchange.mutate().request(modifiedRequest).build();
-        // return chain.filter(modifiedExchange);
+        String username = jwtUtil.getUsernameFromToken(jwt);
+        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+               .header("X-User-Name", username)
+               .build();
+        ServerWebExchange modifiedExchange = exchange.mutate().request(modifiedRequest).build();
+        return chain.filter(modifiedExchange);
 
-        return chain.filter(exchange); // Token is valid, proceed
     }
 
     private boolean isPublicEndpoint(String path) {
