@@ -10,12 +10,10 @@
 
 <style scoped>
 #app-container {
-  min-height: 100vh; /* Ensure container takes full viewport height */
+  min-height: 100vh;
+  width: 100%; /* Ensure it takes full width */
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center content horizontally */
-  justify-content: center; /* Center content vertically for login/register */
-  padding: 20px;
   box-sizing: border-box;
 }
 </style>

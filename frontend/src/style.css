@@ -9,7 +9,14 @@
 
 html,
 body {
-  height: 100%;
+  height: 100%; /* Ensure html and body take full height */
+  width: 100%; /* Ensure html and body take full width */
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f4f7fa; /* Light gray/blue background like Vultr's content area */
+  color: #333;
+  font-size: 14px;
 }
 
 :root {
@@ -29,10 +36,11 @@ body {
 
 a {
   font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: #007bff; /* Vultr's primary blue */
+  text-decoration: none;
 }
 a:hover {
+  text-decoration: underline;
   color: #535bf2;
 }
 
@@ -44,10 +52,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
 h1 {
@@ -79,14 +83,10 @@ button:focus-visible {
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
   height: 100%;
+  width: 100%;
 }
 
-/* Basic input styling (can be overridden) */
 input[type="text"],
 input[type="password"],
 input[type="email"] {
@@ -104,14 +104,12 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Utility class for error messages */
 .error-message {
   color: #dc3545;
   font-size: 0.875em;
   margin-top: 5px;
 }
 
-/* Utility class for simple links */
 .link-button {
   background: none;
   border: none;

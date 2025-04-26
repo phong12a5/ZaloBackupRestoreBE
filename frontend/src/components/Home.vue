@@ -1,60 +1,74 @@
 <template>
-  <div class="home-container">
-    <h1>Welcome!</h1>
-    <p>You have successfully logged in.</p>
-    <!-- Add more content for your home page here -->
-    <button @click="logout">Logout</button> <!-- Optional logout button -->
+  <div class="home-layout">
+    <!-- TopNavbar needs to emit an event to toggle sidebar visibility -->
+    <TopNavbar />
+    <div class="main-container">
+      <!-- LeftSidebar needs to react to the toggle event/state -->
+      <LeftSidebar />
+      <main class="content-area">
+        <!-- Add a container for better content structure/padding -->
+        <div class="content-wrapper">
+          <h2>Welcome to the Home Page!</h2>
+          <p>This is the main content area where your application features will be displayed.</p>
+          <!-- Your main application content goes here -->
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import TopNavbar from './TopNavbar.vue';
+import LeftSidebar from './LeftSidebar.vue';
 
-const router = useRouter();
-
-const logout = () => {
-  // Clear authentication and refresh tokens
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('refreshToken');
-  // Redirect to login page
-  router.push('/login');
-};
+// Need state management (e.g., Pinia/Vuex) or provide/inject
+// to handle sidebar visibility toggle between TopNavbar and LeftSidebar.
 </script>
 
 <style scoped>
-.home-container {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 30px;
-  text-align: center;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+.home-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
-h1 {
-  color: #333;
-  margin-bottom: 15px;
+.main-container {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden; /* Changed from hidden to auto if sidebar might overlay */
+  position: relative; /* Needed for absolute positioning of sidebar on mobile */
 }
 
-p {
-  color: #555;
-  margin-bottom: 25px;
+.content-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  background-color: #f4f7fa; /* Match body background or use #fff */
+  transition: margin-left 0.3s ease; /* Animate margin when sidebar hides (desktop) */
 }
 
-button {
-  padding: 10px 20px;
-  background-color: #dc3545; /* Red for logout */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
+.content-wrapper {
+  padding: 1.5rem 2rem; /* Add padding to content */
+  max-width: 1200px; /* Optional: Max width for content */
+  margin: 0 auto; /* Center content */
 }
 
-button:hover {
-  background-color: #c82333;
+/* Responsive adjustments for content area when sidebar hides */
+@media (max-width: 768px) {
+  .content-area {
+    margin-left: 0; /* No margin needed when sidebar is absolute/hidden */
+  }
 }
+
+/* Example: If sidebar is NOT absolutely positioned on desktop but hides */
+/* You would need a class on main-container when sidebar is hidden */
+/*
+.main-container.sidebar-hidden .content-area {
+  margin-left: 0;
+}
+.main-container.sidebar-hidden .left-sidebar {
+  width: 0;
+  overflow: hidden;
+}
+*/
 </style>
