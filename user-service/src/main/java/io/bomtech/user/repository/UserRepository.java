@@ -1,4 +1,3 @@
-// filepath: user-service/src/main/java/io/bomtech/user/repository/UserRepository.java
 package io.bomtech.user.repository;
 
 import io.bomtech.user.model.User;

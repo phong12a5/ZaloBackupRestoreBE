@@ -1,4 +1,3 @@
-// filepath: user-service/src/main/java/io/bomtech/user/UserServiceApplication.java
 package io.bomtech.user;
 
 import org.springframework.boot.SpringApplication;

@@ -1,7 +1,7 @@
-// filepath: user-service/src/main/java/io/bomtech/user/controller/UserController.java
 package io.bomtech.user.controller;
 
 import io.bomtech.user.model.User;
+import io.bomtech.user.model.UserSafeDto;
 import io.bomtech.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +28,7 @@ public class UserController {
     public ResponseEntity<?> getCurrentUser(@RequestHeader("X-User-Name") String username) {
         return userService.getUserByUsername(username)
             .map(user -> {
-                // Trả về thông tin an toàn, không trả về password
-                return ResponseEntity.ok(new UserSafeDto(user.getId(), user.getUsername()));
+                return ResponseEntity.ok(new UserSafeDto(user));
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
     }

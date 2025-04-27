@@ -62,6 +62,7 @@ elif [ "$BUILD_ALL" = true ]; then
 fi
 # --- End of argument processing ---
 
+echo "BUILD_ALL: $BUILD_ALL, BUILD_SERVICE: $BUILD_SERVICE, SERVICE_TO_BUILD: $SERVICE_TO_BUILD"
 
 # Function to build a service
 build_service() {
@@ -117,8 +118,8 @@ if [ "$BUILD_ALL" = true ]; then
   docker-compose -f docker-compose.yml build --no-cache
   docker-compose -f docker-compose.yml up -d
 else
-  docker-compose down $SERVICE_TO_BUILD
-
+  docker-compose stop "$SERVICE_TO_BUILD"
+  docker-compose rm -f "$SERVICE_TO_BUILD"
   echo "Building specific service with Docker Compose..."
   docker-compose up -d --no-deps --build "$SERVICE_TO_BUILD"
 fi

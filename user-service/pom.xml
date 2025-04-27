@@ -61,11 +61,6 @@
             </exclusions>
         </dependency>
 
-        <!-- Spring Boot Security -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
 
         <!-- Spring Cloud Eureka Client -->
         <dependency>

@@ -1,15 +1,20 @@
 package io.bomtech.user.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-
-@Document(collection = "users")
-public class User {
-    @Id
+public class UserSafeDto {
     private String id;
     private String username;
     private String email;
-    private String fullname;
+
+    public UserSafeDto(String id, String username) {
+        this.id = id;
+        this.username = username;
+    }
+
+    public UserSafeDto(User user) {
+        this.id = user.getId();
+        this.username = user.getUsername();
+        this.email = user.getEmail();
+    }
 
     public String getId() {
         return id;
@@ -33,13 +38,5 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getFullname() {
-        return fullname;
-    }
-
-    public void setFullname(String fullname) {
-        this.fullname = fullname;
     }
 }

@@ -1,41 +1,65 @@
 package io.bomtech.gateway.util; // Adjust package if needed
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
-
-    // Make sure this secret is the same as in auth-service and is configured securely
     @Value("${jwt.secret}") // Load secret from application.yml/properties
     private String secretKey;
 
-    public Claims getAllClaimsFromToken(String token) {
-        // Consider adding proper exception handling for expired/invalid tokens
-        return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
+    private Key key;
+
+    @PostConstruct // Initialize the key after the secret string is injected
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
     public boolean isTokenExpired(String token) {
-        return getAllClaimsFromToken(token).getExpiration().before(new Date());
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            Date expirationDate = claims.getExpiration();
+            return expirationDate.before(new Date());
+        } catch (JwtException e) {
+            return true; // Token is invalid or expired
+        }
     }
 
     public boolean validateToken(String token) {
         try {
-            // Basic validation: checks signature and expiration
-            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token);
             return !isTokenExpired(token);
-        } catch (Exception e) {
-            // Log the exception (e.g., SignatureException, ExpiredJwtException)
-            System.err.println("JWT Validation Error: " + e.getMessage());
-            return false;
+        } catch (JwtException e) {
+            return false; // Token is invalid or expired
         }
     }
 
     public String getUsernameFromToken(String token) {
-         return getAllClaimsFromToken(token).getSubject();
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.getSubject();
+        } catch (JwtException e) {
+            throw new RuntimeException("Invalid JWT token");
+        }
     }
 }

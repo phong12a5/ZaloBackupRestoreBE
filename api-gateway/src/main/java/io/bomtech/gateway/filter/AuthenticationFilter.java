@@ -27,7 +27,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/register",
             "/auth/login",
             "/auth/refresh"
-            // Add other public paths if needed
     );
 
     @Override
