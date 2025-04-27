@@ -114,13 +114,11 @@ echo "Restarting Docker containers..."
 if [ "$BUILD_ALL" = true ]; then
   docker-compose down
 
-  echo "Building all services with Docker Compose..."
-  docker-compose -f docker-compose.yml build --no-cache
+  docker-compose -f docker-compose.yml build --no-cache --force-rm
   docker-compose -f docker-compose.yml up -d
 else
-  docker-compose stop "$SERVICE_TO_BUILD"
-  docker-compose rm -f "$SERVICE_TO_BUILD"
-  echo "Building specific service with Docker Compose..."
-  docker-compose up -d --no-deps --build "$SERVICE_TO_BUILD"
+  docker-compose rm -fs "$SERVICE_TO_BUILD"
+  docker-compose build --no-cache "$SERVICE_TO_BUILD"
+  docker-compose up -d --no-deps "$SERVICE_TO_BUILD"
 fi
 echo "Docker containers are up and running!"

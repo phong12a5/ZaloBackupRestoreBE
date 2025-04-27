@@ -1,36 +1,73 @@
 <template>
-  <nav class="top-navbar">
+  <nav class="top-navbar" @click="closeDropdown">
     <div class="navbar-brand">
-      <!-- Placeholder for a burger menu icon on small screens -->
-      <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-      <!-- Vultr uses an SVG logo, replace with yours -->
-      <span class="brand-text">MyApp</span>
+      <span class="brand-text">ZaloBR</span>
     </div>
     <div class="navbar-menu">
-      <!-- Add Vultr-like icons/links here (e.g., using an icon library) -->
-      <a href="#" class="navbar-item icon-link" aria-label="Notifications"><i class="icon-bell"></i></a>
-      <a href="#" class="navbar-item icon-link" aria-label="Help"><i class="icon-question"></i></a>
-      <div class="navbar-item account-info">
-        <span class="account-name">user@example.com</span>
-        <button class="account-dropdown" aria-label="Account options">▼</button>
-        <button @click="logout" class="logout-button">Logout</button>
+      <div class="account-dropdown-wrapper" @click.stop>
+        <div class="account-avatar" @click="toggleDropdown">
+          <img src="/assets/avatar-placeholder.svg" alt="Avatar" class="avatar-image" />
+        </div>
+        <div v-if="dropdownVisible" class="account-dropdown">
+          <div class="dropdown-header">
+            <strong>{{ username }}</strong>
+            <small>{{ email }}</small>
+          </div>
+          <hr />
+          <div class="dropdown-item">Account Settings</div>
+          <div class="dropdown-item">Profile</div>
+          <hr />
+          <div class="dropdown-item logout" @click="logout">Logout</div>
+        </div>
       </div>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from '../api/axios';
 
 const router = useRouter();
+const dropdownVisible = ref(false);
+const username = ref('');
+const email = ref('');
+
+const toggleDropdown = () => {
+  dropdownVisible.value = !dropdownVisible.value;
+};
+
+const closeDropdown = () => {
+  dropdownVisible.value = false;
+};
 
 const logout = () => {
-  // Clear authentication tokens (implement this based on your auth logic)
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
-  console.log('Logged out');
   router.push('/login');
 };
+
+const fetchUserInfo = async () => {
+  try {
+    const response = await axios.get('/users/me', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
+    });
+    username.value = response.data.username;
+    email.value = response.data.email;
+  } catch (error: any) {
+    console.error('Failed to fetch user info:', error);
+    if (error.response && error.response.status === 401) {
+      router.push('/login');
+    }
+  }
+};
+
+onMounted(() => {
+  fetchUserInfo();
+});
 </script>
 
 <style scoped>
@@ -38,29 +75,14 @@ const logout = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 1rem; /* Adjust padding */
-  background-color: #1e2a3a; /* Vultr dark blue */
+  padding: 0 1rem;
+  background-color: #1e2a3a;
   color: #fff;
-  height: 55px; /* Vultr's approx height */
-  border-bottom: 1px solid #34495e; /* Slightly lighter border */
+  height: 55px;
+  border-bottom: 1px solid #34495e;
 }
 
 .navbar-brand {
-  display: flex;
-  align-items: center;
-}
-
-.menu-toggle {
-  display: none; /* Hidden by default, shown on small screens */
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.5rem;
-  margin-right: 0.5rem;
-  padding: 0.2rem 0.5rem;
-}
-
-.brand-text {
   font-weight: bold;
   font-size: 1.1rem;
   color: #fff;
@@ -71,67 +93,67 @@ const logout = () => {
   align-items: center;
 }
 
-.navbar-item {
-  margin-left: 1rem;
-  display: flex;
-  align-items: center;
+.account-dropdown-wrapper {
+  position: relative;
 }
 
-.icon-link {
-  color: #bdc3c7; /* Light gray for icons */
-  font-size: 1.2rem;
-}
-.icon-link:hover {
-  color: #fff;
-}
-
-/* Placeholder for icons - replace with actual icons */
-.icon-bell::before { content: '🔔'; }
-.icon-question::before { content: '?'; }
-
-.account-info {
-  color: #ecf0f1; /* Lighter text for account */
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
 }
 
-.account-name {
-  margin-right: 0.5rem;
-  font-size: 0.9rem;
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .account-dropdown {
-  background: none;
-  border: none;
-  color: #bdc3c7;
-  margin-right: 0.8rem;
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: #fff;
+  color: #2c3e50;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  z-index: 1000;
+  padding: 10px 0;
 }
 
-.logout-button {
-  background-color: #e74c3c; /* Red logout button */
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
+.dropdown-header {
+  padding: 10px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.dropdown-header strong {
+  display: block;
+  font-size: 1rem;
+  color: #333;
+}
+
+.dropdown-header small {
   font-size: 0.85rem;
-}
-.logout-button:hover {
-  background-color: #c0392b;
+  color: #666;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .menu-toggle {
-    display: block; /* Show burger menu */
-  }
-  .brand-text {
-    /* Optionally hide brand text on very small screens */
-    /* display: none; */
-  }
-  .account-name {
-    display: none; /* Hide email on small screens */
-  }
-  .navbar-item:not(.account-info) {
-     /* Hide other items like icons if needed */
-     /* display: none; */
-  }
+.dropdown-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f4f4f4;
+}
+
+.logout {
+  color: #e74c3c;
+  font-weight: bold;
 }
 </style>
