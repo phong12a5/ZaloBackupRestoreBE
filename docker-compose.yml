@@ -68,6 +68,24 @@ services:
     networks:
       - app-network
 
+  device-management-service:
+    build:
+      context: ./device-management-service
+      dockerfile: Dockerfile
+    container_name: device-management-service
+    ports:
+      - "8083:8083" # Map port 8083
+    environment:
+      # Trỏ đến MongoDB, sử dụng database 'backupdb'
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/backupdb?authSource=admin
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      # Thêm các biến môi trường khác nếu cần
+    depends_on:
+      - mongodb
+      - eureka-server
+    networks:
+      - app-network
+
   frontend:
     build:
       context: ./frontend

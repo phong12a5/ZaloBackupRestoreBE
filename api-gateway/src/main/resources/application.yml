@@ -28,6 +28,18 @@ spring:
           predicates:
             - Path=/users/**
 
+        # Route for device-management-service HTTP APIs
+        - id: device-management-service-http
+          uri: lb://device-management-service # Use Eureka service name
+          predicates:
+            - Path=/api/devices/** # Match all paths under /api/devices/
+
+        # Route for device-management-service WebSocket
+        - id: device-management-service-ws
+          uri: ws://device-management-service # Use ws scheme for WebSocket proxying
+          predicates:
+            - Path=/ws/device/** # Match the WebSocket endpoint path
+
   data:
     mongodb:
       uri: mongodb://admin:password@mongodb:27017/userdb

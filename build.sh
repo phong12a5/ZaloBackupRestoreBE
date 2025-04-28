@@ -84,6 +84,7 @@ if [ "$BUILD_ALL" = true ]; then
     build_service "./api-gateway"
     build_service "./auth-service"
     build_service "./user-service"
+    build_service "./device-management-service"
     echo "All services built successfully!"
   fi
 elif [ -n "$SERVICE_TO_BUILD" ]; then

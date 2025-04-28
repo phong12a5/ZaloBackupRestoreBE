@@ -1,13 +1,12 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Login from '../components/Login.vue';
 import Register from '../components/Register.vue';
 import Home from '../components/Home.vue'; // Import the Home component
+import DevicesView from '../views/DevicesView.vue';
+import AccountsView from '../views/AccountsView.vue'; // Import AccountsView
 
-const routes = [
-  {
-    path: '/',
-    redirect: '/login' // Redirect root path to login
-  },
+const routes: RouteRecordRaw[] = [
+  { path: '/', redirect: '/login' },
   {
     path: '/login',
     name: 'Login',
@@ -22,7 +21,23 @@ const routes = [
     path: '/home',
     name: 'Home',
     component: Home,
-    meta: { requiresAuth: true } // Optional: Add meta field for route guarding
+    meta: { requiresAuth: true },
+    redirect: '/devices',
+    children: [
+      {
+        path: '/devices',
+        name: 'Devices',
+        component: DevicesView,
+        meta: { requiresAuth: true }
+      },
+      { // Add route for AccountsView
+        path: '/accounts',
+        name: 'Accounts',
+        component: AccountsView, // Use direct import or lazy load
+        // component: () => import('../views/AccountsView.vue'), // Lazy load example
+        meta: { requiresAuth: true }
+      }
+    ]
   },
   // Add other routes here
 ];

@@ -1,0 +1,28 @@
+server:
+  port: 8083 # Port cho service này
+
+spring:
+  application:
+    name: device-management-service
+  data:
+    mongodb:
+      # Sử dụng Reactive MongoDB URI nếu cần, hoặc cấu hình host/port/database riêng
+      # Sử dụng database 'backupdb' riêng biệt
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://admin:password@mongodb:27017/backupdb?authSource=admin}
+
+eureka:
+  client:
+    serviceUrl:
+      # Sẽ được ghi đè bởi biến môi trường trong docker-compose
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true # Quan trọng trong môi trường container
+
+# Cấu hình logging nếu cần
+logging:
+  level:
+    root: INFO
+    io.bomtech.device: DEBUG # Log chi tiết hơn cho package của bạn
+    org.springframework.web.reactive.socket: DEBUG # Log WebSocket

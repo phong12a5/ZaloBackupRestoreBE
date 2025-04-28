@@ -1,17 +1,11 @@
 <template>
   <div class="home-layout">
-    <!-- TopNavbar needs to emit an event to toggle sidebar visibility -->
     <TopNavbar />
     <div class="main-container">
-      <!-- LeftSidebar needs to react to the toggle event/state -->
       <LeftSidebar />
       <main class="content-area">
-        <!-- Add a container for better content structure/padding -->
-        <div class="content-wrapper">
-          <h2>Welcome to the Home Page!</h2>
-          <p>This is the main content area where your application features will be displayed.</p>
-          <!-- Your main application content goes here -->
-        </div>
+        <!-- Replace placeholder content with router-view -->
+        <router-view></router-view>
       </main>
     </div>
   </div>
@@ -20,6 +14,7 @@
 <script setup lang="ts">
 import TopNavbar from './TopNavbar.vue';
 import LeftSidebar from './LeftSidebar.vue';
+import { RouterView } from 'vue-router'; // Import RouterView
 
 // Need state management (e.g., Pinia/Vuex) or provide/inject
 // to handle sidebar visibility toggle between TopNavbar and LeftSidebar.
@@ -45,10 +40,11 @@ import LeftSidebar from './LeftSidebar.vue';
   overflow-y: auto;
   background-color: #f4f7fa; /* Match body background or use #fff */
   transition: margin-left 0.3s ease; /* Animate margin when sidebar hides (desktop) */
+  /* Remove padding from here if child views handle their own padding */
+  /* padding: 1.5rem 2rem; */
 }
 
 .content-wrapper {
-  padding: 1.5rem 2rem; /* Add padding to content */
   max-width: 1200px; /* Optional: Max width for content */
   margin: 0 auto; /* Center content */
 }

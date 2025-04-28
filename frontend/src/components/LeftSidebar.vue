@@ -4,19 +4,17 @@
       <!-- Optional header/logo -->
     </div>
     <ul>
-      <!-- Add icons using an icon library -->
-      <li><a href="#"><i class="icon-server"></i> Products</a></li>
-      <li><a href="#"><i class="icon-billing"></i> Billing</a></li>
-      <li><a href="#"><i class="icon-support"></i> Support</a></li>
-      <li><a href="#"><i class="icon-account"></i> Account</a></li>
-      <li><a href="#"><i class="icon-api"></i> API</a></li>
-      <!-- Add more Vultr-like menu items -->
+      <!-- Use router-link for navigation -->
+      <li><router-link to="/devices"><i class="icon-server"></i> Devices</router-link></li>
+      <li><router-link to="/accounts"><i class="icon-billing"></i> Accounts</router-link></li>
+      <!-- Removed API Docs link -->
     </ul>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'; // Assuming you might control visibility via props/events later
+import { ref } from 'vue';
+import { RouterLink } from 'vue-router'; // Import RouterLink
 
 // Placeholder state - in a real app, this would likely be managed globally (Vuex/Pinia)
 // or passed via props/events triggered by the TopNavbar toggle.
@@ -48,7 +46,8 @@ ul {
   margin: 0;
 }
 
-li a {
+li a, /* Keep styling for 'a' if any exist elsewhere, or remove if only router-links are used */
+li .router-link { /* Apply base styles to router-link */
   color: #bdc3c7; /* Lighter gray text */
   text-decoration: none;
   display: flex; /* Use flex for icon alignment */
@@ -56,14 +55,17 @@ li a {
   padding: 0.75rem 1.5rem; /* Adjust padding */
   font-size: 0.95rem;
   white-space: nowrap; /* Prevent text wrapping */
+  transition: background-color 0.2s ease, color 0.2s ease; /* Smooth transition */
 }
 
-li a:hover {
+li a:hover,
+li .router-link:hover {
   color: #fff;
   background-color: #34495e; /* Slightly lighter background on hover */
 }
 
-li a i {
+li a i,
+li .router-link i {
   margin-right: 0.8rem; /* Space between icon and text */
   width: 1.2em; /* Ensure icons align nicely */
   text-align: center;
