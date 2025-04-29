@@ -130,36 +130,38 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
 
             switch (messageType) {
                 case "BACKUP_STATUS_UPDATE":
-                    String status = root.path("payload").path("status").asText(); // e.g., "INPROGRESS", "CANCELED", "FAILED"
+                    String status = root.path("payload").path("status").asText(); // e.g., "INIT", "BACKING_UP", "UPLOADING", "COMPLETED", "BACKUP_FAILED", "UPLOAD_FAILED", "CANCELED"
                     String accountId = root.path("payload").path("accountId").asText(); // Zalo account being backed up
                     String statusMessage = root.path("payload").path("message").asText(); // Optional: details
+
+                    log.info("Received BACKUP_STATUS_UPDATE for device {}: Status={}, AccountId={}, Message='{}'",
+                             deviceId, status, accountId, statusMessage);
+
+                    // Update the status first
                     deviceService.updateBackupStatus(deviceId, accountId, status, statusMessage)
+                        .flatMap(updatedDevice -> { // Use flatMap to chain the next operation conditionally
+                            if ("COMPLETED".equals(status)) {
+                                // If status is COMPLETED, extract details and save account info
+                                // Assumes accountName and phoneNumber are sent with the COMPLETED status update
+                                String accountName = root.path("payload").path("accountName").asText("Unknown"); // Provide default if missing
+                                String phoneNumber = root.path("payload").path("phoneNumber").asText(""); // Provide default if missing
+                                log.info("Backup COMPLETED for device {}, saving account details for AccountId={}", deviceId, accountId);
+                                return deviceService.saveBackedUpAccount(deviceId, userId, accountId, accountName, phoneNumber)
+                                        .thenReturn(updatedDevice); // Return the updated device after saving
+                            } else {
+                                // If status is not COMPLETED, just return the updated device
+                                return Mono.just(updatedDevice);
+                            }
+                        })
                         .subscribe(
-                            null,
+                            device -> log.info("Processed BACKUP_STATUS_UPDATE for device {}, status: {}", deviceId, status),
                             error -> log.error("Error processing BACKUP_STATUS_UPDATE for device {}: {}", deviceId, error.getMessage())
                         );
                     break;
 
-                case "BACKUP_COMPLETE":
-                    String completedAccountId = root.path("payload").path("accountId").asText();
-                    String accountName = root.path("payload").path("accountName").asText();
-                    String phoneNumber = root.path("payload").path("phoneNumber").asText(); // Optional
-
-                    // Update final status first
-                    deviceService.updateBackupStatus(deviceId, completedAccountId, "COMPLETED", "Backup successful")
-                        .then(
-                            deviceService.saveBackedUpAccount(deviceId, userId, completedAccountId, accountName, phoneNumber)
-                        )
-                        .subscribe(
-                            saved -> log.info("Backup result saved for device {}, account {}", deviceId, completedAccountId),
-                            error -> log.error("Error processing BACKUP_COMPLETE for device {}: {}", deviceId, error.getMessage())
-                        );
-                    break;
-
-                // Add other message types as needed (e.g., DEVICE_INFO_UPDATE, HEARTBEAT)
+                // ... other cases ...
                 // case "HEARTBEAT":
                 //     log.debug("Received heartbeat from device {}", deviceId);
-                //     // Optionally update device.lastSeen here or just rely on WebSocket activity
                 //     break;
 
                 default:

@@ -17,7 +17,8 @@
           <th>OS</th>
           <th>App Version</th>
           <th>Last Seen</th>
-          <th>Last Backup</th>
+          <th>Account</th>
+          <th>Backup Status</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -32,6 +33,7 @@
           <td>{{ device.os || 'N/A' }}</td>
           <td>{{ device.appVersion || 'N/A' }}</td>
           <td>{{ formatTimestamp(device.lastSeen) }}</td>
+          <td>{{ device.lastBackupAccountId || 'N/A' }}</td> <!-- New Cell -->
           <td>
              <span v-if="device.lastBackupTimestamp">
                {{ device.lastBackupStatus || 'Unknown' }} ({{ formatTimestamp(device.lastBackupTimestamp) }})
@@ -97,46 +99,49 @@ const handleWebSocketMessage = (event: MessageEvent) => {
       return;
     }
 
-    // Find the device to update
     const deviceIndex = devices.value.findIndex(d => d.id === payload.deviceId);
     if (deviceIndex === -1) {
       console.warn(`Received update for unknown device ID: ${payload.deviceId}`);
-      // Optionally fetch devices again if an update is for a new device
-      // fetchDevices();
       return;
     }
 
     const deviceToUpdate = devices.value[deviceIndex];
 
-    // Update device properties based on the message content
-    // Adjust property names based on actual backend message structure
     if (update.type === 'DEVICE_STATUS_UPDATE') {
-        if (update.payload.hasOwnProperty('online')) {
+        // ... existing DEVICE_STATUS_UPDATE logic ...
+         if (update.payload.hasOwnProperty('online')) {
             deviceToUpdate.online = update.payload.online;
         }
         if (update.payload.hasOwnProperty('lastSeen')) {
             deviceToUpdate.lastSeen = update.payload.lastSeen;
         }
-        // Add other status fields if needed
     } else if (update.type === 'BACKUP_STATUS_UPDATE') {
         if (update.payload.hasOwnProperty('status')) {
-            deviceToUpdate.lastBackupStatus = update.payload.status;
-            // Reset backup in progress flag if status indicates completion or failure
-            if (update.payload.status === 'COMPLETED' || update.payload.status === 'FAILED' || update.payload.status === 'CANCELED') {
-                 backupInProgress[deviceToUpdate.id] = false;
-            } else if (update.payload.status === 'IN_PROGRESS') {
+            const newStatus = update.payload.status;
+            deviceToUpdate.lastBackupStatus = newStatus;
+
+            // Update backupInProgress based on the new status
+            // Consider BACKING_UP, UPLOADING as in-progress states
+            if (['BACKING_UP', 'UPLOADING'].includes(newStatus)) {
                  backupInProgress[deviceToUpdate.id] = true;
+            // Consider INIT, COMPLETED, FAILED (both types), CANCELED as final/inactive states
+            } else if (['INIT', 'COMPLETED', 'BACKUP_FAILED', 'UPLOAD_FAILED', 'CANCELED'].includes(newStatus)) {
+                 backupInProgress[deviceToUpdate.id] = false;
+            }
+            // Defaulting to false if status is not explicitly an in-progress one.
+            else {
+                 backupInProgress[deviceToUpdate.id] = false;
+                 console.warn(`Received unknown backup status: ${newStatus}`);
             }
         }
-         if (update.payload.hasOwnProperty('timestamp')) { // Assuming backend sends timestamp with status
+         if (update.payload.hasOwnProperty('timestamp')) {
              deviceToUpdate.lastBackupTimestamp = update.payload.timestamp;
          }
     } else {
         console.warn(`Received unhandled message type: ${update.type}`);
     }
 
-    // Vue reactivity handles the UI update automatically
-    devices.value[deviceIndex] = { ...deviceToUpdate }; // Ensure reactivity update
+    devices.value[deviceIndex] = { ...deviceToUpdate };
 
   } catch (e) {
     console.error('Failed to parse WebSocket message or update device:', e);
@@ -279,6 +284,7 @@ th, td {
   border-bottom: 1px solid #e0e0e0;
   font-size: 0.9rem;
   vertical-align: middle; /* Align content vertically */
+  white-space: nowrap; /* Prevent text wrapping in cells */
 }
 
 th {
