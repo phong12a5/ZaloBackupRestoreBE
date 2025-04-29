@@ -39,13 +39,17 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange); // Skip authentication for public paths
         }
 
+        String authorizationHeader = null;
+        String jwt = null;
+
         // Check for Authorization header
         if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-            return onError(exchange, HttpStatus.UNAUTHORIZED); // No Authorization header
+            if (path.startsWith("/ws/") && request.getQueryParams().containsKey("token")) {
+                authorizationHeader = "Bearer " + request.getQueryParams().getFirst("token");
+            }
+        } else {
+            authorizationHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         }
-
-        String authorizationHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        String jwt = null;
 
         // Check if header starts with "Bearer "
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {

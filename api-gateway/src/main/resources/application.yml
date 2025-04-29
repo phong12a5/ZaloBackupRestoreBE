@@ -34,11 +34,16 @@ spring:
           predicates:
             - Path=/api/devices/** # Match all paths under /api/devices/
 
-        # Route for device-management-service WebSocket
-        - id: device-management-service-ws
-          uri: ws://device-management-service:8083 # Use ws scheme and specify the correct port (8083)
+        # Route for device-management-service WebSocket (Mobile App)
+        - id: device-management-service-ws-mobile
+          uri: ws://device-management-service:8083
           predicates:
-            - Path=/ws/device/** # Match the WebSocket endpoint path
+            - Path=/ws/device/**
+        # Route for device-management-service WebSocket (Web Frontend)
+        - id: device-management-service-ws-web
+          uri: ws://device-management-service:8083
+          predicates:
+            - Path=/ws/web/updates/**
 
   data:
     mongodb:

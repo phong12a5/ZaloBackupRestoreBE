@@ -5,6 +5,7 @@ import io.bomtech.device.model.Device;
 import io.bomtech.device.repository.BackedUpAccountRepository;
 import io.bomtech.device.repository.DeviceRepository;
 import io.bomtech.device.websocket.DeviceWebSocketHandler;
+import io.bomtech.device.websocket.WebUpdatesWebSocketHandler; // Import new handler
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.Map; // For creating update payload
 
 @Service
 @RequiredArgsConstructor // Lombok for constructor injection of final fields
@@ -20,7 +22,8 @@ public class DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final BackedUpAccountRepository backedUpAccountRepository;
-    private final DeviceWebSocketHandler webSocketHandler; // Inject WebSocket handler
+    private final DeviceWebSocketHandler deviceWebSocketHandler; // Handler for device connections
+    private final WebUpdatesWebSocketHandler webUpdatesWebSocketHandler; // Handler for web client updates
 
     // --- Device Management ---
 
@@ -29,7 +32,7 @@ public class DeviceService {
         return deviceRepository.findByUserId(userId)
                 // Update online status based on WebSocket connection
                 .map(device -> {
-                    device.setOnline(webSocketHandler.isDeviceConnected(device.getId()));
+                    device.setOnline(deviceWebSocketHandler.isDeviceConnected(device.getId()));
                     return device;
                 });
     }
@@ -38,7 +41,7 @@ public class DeviceService {
         log.debug("Fetching device by ID: {}", deviceId);
         return deviceRepository.findById(deviceId)
                 .map(device -> {
-                    device.setOnline(webSocketHandler.isDeviceConnected(device.getId()));
+                    device.setOnline(deviceWebSocketHandler.isDeviceConnected(device.getId()));
                     return device;
                 });
     }
@@ -60,7 +63,19 @@ public class DeviceService {
                     device.setOnline(true);
                     device.setLastSeen(Instant.now());
                     return deviceRepository.save(device);
-                }));
+                }))
+                .doOnSuccess(savedDevice -> {
+                    // Send update to web clients
+                    Map<String, Object> update = Map.of(
+                        "type", "DEVICE_STATUS_UPDATE",
+                        "payload", Map.of(
+                            "deviceId", savedDevice.getId(),
+                            "online", true,
+                            "lastSeen", savedDevice.getLastSeen().toString()
+                        )
+                    );
+                    webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
+                });
     }
 
     // Called when a device disconnects
@@ -71,7 +86,19 @@ public class DeviceService {
                     device.setOnline(false);
                     device.setLastSeen(Instant.now()); // Record last seen time on disconnect
                     log.debug("Updating device {} status to offline", deviceId);
-                    return deviceRepository.save(device);
+                    return deviceRepository.save(device)
+                           .doOnSuccess(savedDevice -> {
+                               // Send update to web clients
+                               Map<String, Object> update = Map.of(
+                                   "type", "DEVICE_STATUS_UPDATE",
+                                   "payload", Map.of(
+                                       "deviceId", savedDevice.getId(),
+                                       "online", false,
+                                       "lastSeen", savedDevice.getLastSeen().toString()
+                                   )
+                               );
+                               webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
+                           });
                 })
                 .then(); // Convert Mono<Device> to Mono<Void>
     }
@@ -82,7 +109,7 @@ public class DeviceService {
         log.info("Initiating backup for device: {} by user: {}", deviceId, userId);
         // 1. Check if device exists and belongs to the user (optional but recommended)
         // 2. Check if device is online via WebSocketHandler
-        if (!webSocketHandler.isDeviceConnected(deviceId)) {
+        if (!deviceWebSocketHandler.isDeviceConnected(deviceId)) {
              log.warn("Cannot initiate backup: Device {} is offline.", deviceId);
              return Mono.error(new RuntimeException("Device " + deviceId + " is offline."));
         }
@@ -92,7 +119,7 @@ public class DeviceService {
         String backupCommand = "{\"command\": \"start_backup\"}"; // Simple example
 
         // 4. Send the command via WebSocketHandler
-        return webSocketHandler.sendCommandToDevice(deviceId, backupCommand)
+        return deviceWebSocketHandler.sendCommandToDevice(deviceId, backupCommand)
                 .doOnSuccess(v -> log.info("Backup command sent successfully to device {}", deviceId))
                 .doOnError(e -> log.error("Failed to send backup command to device {}: {}", deviceId, e.getMessage()));
         // Note: We don't wait for completion here. Status updates come via WebSocket messages.
@@ -126,10 +153,23 @@ public class DeviceService {
                      device.setLastBackupStatus(status);
                      device.setLastBackupTimestamp(Instant.now());
                      // TODO: Potentially store the 'message' as well if needed
-                     return deviceRepository.save(device);
+                     return deviceRepository.save(device)
+                            .doOnSuccess(savedDevice -> {
+                                // Send update to web clients
+                                Map<String, Object> update = Map.of(
+                                    "type", "BACKUP_STATUS_UPDATE",
+                                    "payload", Map.of(
+                                        "deviceId", savedDevice.getId(),
+                                        "accountId", zaloAccountId,
+                                        "status", status,
+                                        "message", message, // Include the message from device
+                                        "timestamp", savedDevice.getLastBackupTimestamp().toString()
+                                    )
+                                );
+                                webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
+                            });
                  })
                  .doOnError(e -> log.error("Failed to update backup status for device {}: {}", deviceId, e.getMessage()))
                  .then(); // Convert Mono<Device> to Mono<Void>
-         // TODO: Consider pushing this status update to connected web clients (e.g., via another WebSocket/SSE)
     }
 }
