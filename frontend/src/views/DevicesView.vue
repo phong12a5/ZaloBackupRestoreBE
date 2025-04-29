@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, onUnmounted, reactive } from 'vue'; // Import onUnmounted
 import { getMyDevices, requestDeviceBackup } from '@/api/deviceApi';
 import type { Device } from '@/types';
 
@@ -64,12 +64,134 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 // Track backup state per device
 const backupInProgress = reactive<Record<string, boolean>>({});
+const ws = ref<WebSocket | null>(null); // WebSocket instance
+
+// Function to construct WebSocket URL
+const getWebSocketURL = (): string | null => {
+  const token = localStorage.getItem('authToken'); // Assuming token is stored here
+  if (!token) {
+    console.error('Access token not found for WebSocket connection.');
+    error.value = 'Authentication token missing. Cannot connect for real-time updates.';
+    return null;
+  }
+  // Construct URL based on current window location, targeting the API Gateway port (8080)
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // Use API Gateway's host and port. Assuming gateway runs on the same host as frontend serves from, but port 8080.
+  // Adjust hostname/port if gateway is elsewhere.
+  const host = window.location.hostname;
+  const gatewayPort = 8080; // As defined in api-gateway application.yml
+  const url = `${protocol}//${host}:${gatewayPort}/ws/web/updates?token=${encodeURIComponent(token)}`;
+  console.log('WebSocket URL:', url); // Log the constructed URL for debugging
+  return url;
+};
+
+// Function to handle incoming WebSocket messages
+const handleWebSocketMessage = (event: MessageEvent) => {
+  try {
+    const update = JSON.parse(event.data);
+    console.log('WebSocket message received:', update);
+
+    const payload = update.payload;
+    if (!payload || !payload.deviceId) {
+      console.warn('Received message without deviceId:', update);
+      return;
+    }
+
+    // Find the device to update
+    const deviceIndex = devices.value.findIndex(d => d.id === payload.deviceId);
+    if (deviceIndex === -1) {
+      console.warn(`Received update for unknown device ID: ${payload.deviceId}`);
+      // Optionally fetch devices again if an update is for a new device
+      // fetchDevices();
+      return;
+    }
+
+    const deviceToUpdate = devices.value[deviceIndex];
+
+    // Update device properties based on the message content
+    // Adjust property names based on actual backend message structure
+    if (update.type === 'DEVICE_STATUS_UPDATE') {
+        if (update.payload.hasOwnProperty('online')) {
+            deviceToUpdate.online = update.payload.online;
+        }
+        if (update.payload.hasOwnProperty('lastSeen')) {
+            deviceToUpdate.lastSeen = update.payload.lastSeen;
+        }
+        // Add other status fields if needed
+    } else if (update.type === 'BACKUP_STATUS_UPDATE') {
+        if (update.payload.hasOwnProperty('status')) {
+            deviceToUpdate.lastBackupStatus = update.payload.status;
+            // Reset backup in progress flag if status indicates completion or failure
+            if (update.payload.status === 'COMPLETED' || update.payload.status === 'FAILED' || update.payload.status === 'CANCELED') {
+                 backupInProgress[deviceToUpdate.id] = false;
+            } else if (update.payload.status === 'IN_PROGRESS') {
+                 backupInProgress[deviceToUpdate.id] = true;
+            }
+        }
+         if (update.payload.hasOwnProperty('timestamp')) { // Assuming backend sends timestamp with status
+             deviceToUpdate.lastBackupTimestamp = update.payload.timestamp;
+         }
+    } else {
+        console.warn(`Received unhandled message type: ${update.type}`);
+    }
+
+    // Vue reactivity handles the UI update automatically
+    devices.value[deviceIndex] = { ...deviceToUpdate }; // Ensure reactivity update
+
+  } catch (e) {
+    console.error('Failed to parse WebSocket message or update device:', e);
+  }
+};
+
+// Function to setup WebSocket connection
+const connectWebSocket = () => {
+  const url = getWebSocketURL();
+  if (!url) return; // Don't connect if URL couldn't be created (e.g., no token)
+
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    console.log('WebSocket already connected.');
+    return;
+  }
+
+  ws.value = new WebSocket(url);
+
+  ws.value.onopen = () => {
+    console.log('WebSocket connection established for real-time updates.');
+    error.value = null; // Clear any previous errors on successful connection
+  };
+
+  ws.value.onmessage = handleWebSocketMessage;
+
+  ws.value.onerror = (event) => {
+    console.error('WebSocket error:', event);
+    error.value = 'WebSocket connection error. Real-time updates may be unavailable.';
+    // Optional: Implement retry logic here
+  };
+
+  ws.value.onclose = (event) => {
+    console.log('WebSocket connection closed:', event.reason, `Code: ${event.code}`);
+    ws.value = null; // Clear the ref
+    // Optional: Attempt to reconnect after a delay, unless closed intentionally
+    if (!event.wasClean) {
+        error.value = `WebSocket disconnected unexpectedly (Code: ${event.code}). Attempting to reconnect...`;
+        setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
+    } else {
+         error.value = 'WebSocket connection closed.';
+    }
+  };
+};
 
 const fetchDevices = async () => {
   isLoading.value = true;
   error.value = null;
   try {
     devices.value = await getMyDevices();
+    // Initialize backupInProgress state for fetched devices
+    devices.value.forEach(device => {
+        if (backupInProgress[device.id] === undefined) {
+             backupInProgress[device.id] = false; // Default to not in progress
+        }
+    });
   } catch (err: any) {
     console.error('Failed to fetch devices:', err);
     error.value = err.response?.data?.message || err.message || 'An unknown error occurred';
@@ -79,23 +201,20 @@ const fetchDevices = async () => {
 };
 
 const triggerBackup = async (deviceId: string) => {
-  if (backupInProgress[deviceId]) return; // Prevent multiple clicks
+  if (backupInProgress[deviceId]) return;
 
-  backupInProgress[deviceId] = true;
+  backupInProgress[deviceId] = true; // Set immediately for UI feedback
   try {
     await requestDeviceBackup(deviceId);
-    // Optionally show a success message (e.g., using a toast notification library)
     console.log(`Backup initiated for device ${deviceId}`);
-    alert(`Backup initiated for device ${deviceId}. Status updates will appear here or via notifications.`); // Simple alert
-    // Note: Actual progress/completion comes via WebSocket or polling
+    // No alert needed, rely on WebSocket for status updates
+    // Optionally show a temporary "Request sent" notification
   } catch (err: any) {
     console.error(`Failed to initiate backup for device ${deviceId}:`, err);
-    // Show error message to the user
     alert(`Error starting backup: ${err.response?.data?.message || err.message}`);
-  } finally {
-    // Reset button state after a short delay or based on WebSocket feedback
-     setTimeout(() => { backupInProgress[deviceId] = false; }, 5000); // Simple reset after 5s
+    backupInProgress[deviceId] = false; // Reset on error
   }
+  // No finally block needed to reset state, rely on WebSocket message
 };
 
 const formatTimestamp = (timestamp?: string): string => {
@@ -108,11 +227,20 @@ const formatTimestamp = (timestamp?: string): string => {
   }
 };
 
-// Fetch devices when the component mounts
-onMounted(fetchDevices);
+// Fetch devices and connect WebSocket when the component mounts
+onMounted(() => {
+  fetchDevices();
+  connectWebSocket();
+});
 
-// TODO: Implement WebSocket connection here or in a service
-// to update device online status and backup progress in real-time.
+// Close WebSocket connection when the component unmounts
+onUnmounted(() => {
+  if (ws.value) {
+    console.log('Closing WebSocket connection.');
+    ws.value.close(1000, 'Component unmounted'); // 1000 is normal closure
+    ws.value = null;
+  }
+});
 </script>
 
 <style scoped>
