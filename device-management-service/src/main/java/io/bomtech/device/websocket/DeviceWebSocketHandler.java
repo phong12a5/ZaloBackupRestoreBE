@@ -4,13 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.bomtech.device.model.Device;
 import io.bomtech.device.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders; // Import HttpHeaders
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
@@ -36,31 +36,33 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
 
     @Override
     public Mono<Void> handle(WebSocketSession session) {
-        String deviceId = extractDeviceId(session);
-        // --- Get userId from Handshake Header ---
-        HttpHeaders headers = session.getHandshakeInfo().getHeaders();
-        String userId = headers.getFirst(USER_ID_HEADER); // Read correct header
-
-        if (deviceId == null || deviceId.isBlank() || !StringUtils.hasText(userId)) {
+        Device reqDevice = extractDeviceInfo(session);
+        if (reqDevice == null) {
             log.warn("WebSocket connection attempt without deviceId or {} header. Closing session {}.", USER_ID_HEADER, session.getId()); // Log correct header name
             return session.close();
         }
 
-        log.info("Device connected: {} (User: {}) with session ID: {}", deviceId, userId, session.getId());
+        // --- Get userId from Handshake Header ---
+        HttpHeaders headers = session.getHandshakeInfo().getHeaders();
+        String userId = headers.getFirst(USER_ID_HEADER); // Read correct header
+        reqDevice.setUserId(userId); // Set userId in device object
+
+
+        log.info("Device connected: {} (User: {}) with session ID: {}", reqDevice.getId(), userId, session.getId());
 
         Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
-        sinks.put(deviceId, sink);
-        sessions.put(deviceId, session);
+        sinks.put(reqDevice.getId(), sink);
+        sessions.put(reqDevice.getId(), session);
 
         // Call service to handle connection logic (update DB status)
         // We subscribe here to trigger the action but don't block the handler setup
         DeviceService deviceService = applicationContext.getBean(DeviceService.class);
-        deviceService.handleDeviceConnection(deviceId, userId).subscribe(
-            device -> log.debug("Device {} connection handled successfully.", deviceId),
-            error -> log.error("Error handling connection for device {}: {}", deviceId, error.getMessage())
+        deviceService.handleDeviceConnection(reqDevice).subscribe(
+            device -> log.debug("Device {} connection handled successfully.", reqDevice.getId()),
+            error -> log.error("Error handling connection for device {}: {}", reqDevice.getId(), error.getMessage())
         );
 
-        final String finalDeviceId = deviceId;
+        final String finalDeviceId = reqDevice.getId(); // Use the deviceId extracted from header
         final String finalUserId = userId; // Use the userId extracted from header
 
         Mono<Void> input = session.receive()
@@ -86,18 +88,33 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
     }
 
     // Placeholder for deviceId extraction logic
-    private String extractDeviceId(WebSocketSession session) {
-        // Example: Extract from query parameters
+    private Device extractDeviceInfo(WebSocketSession session) {
         String query = session.getHandshakeInfo().getUri().getQuery();
+        Device device = null;
         if (query != null) {
+            device = new Device();
             for (String param : query.split("&")) {
                 String[] pair = param.split("=");
-                if (pair.length == 2 && "deviceId".equals(pair[0])) {
-                    return pair[1];
+                if (pair.length == 2) {
+                    switch (pair[0]) {
+                        case "deviceId":
+                            device.setId(pair[1]);
+                            break;
+                        case "deviceName":
+                            device.setDeviceName(pair[1]);
+                            break;
+                        case "os":
+                            device.setOs(pair[1]);
+                            break;
+                        case "appVersion":
+                            device.setAppVersion(pair[1]);
+                    }
                 }
             }
         }
-        // Could also extract from headers: session.getHandshakeInfo().getHeaders().getFirst("X-Device-Id");
+        if (device != null && device.getId() != null) {
+            return device;
+        }
         log.warn("Could not extract deviceId from session {}", session.getId());
         return null; // Or throw an exception / close session immediately
     }

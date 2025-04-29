@@ -29,12 +29,4 @@ public class Device {
     private String lastBackupStatus; // e.g., "INPROGRESS", "COMPLETED", "CANCELED", "FAILED"
     private String lastBackupAccountId; // Zalo Account ID of the last/current backup
     private Instant lastBackupTimestamp; // Timestamp of the last status update for backup
-
-    // Constructor, potentially add more fields like push notification token, etc.
-    public Device(String id, String userId, String deviceName) {
-        this.id = id;
-        this.userId = userId;
-        this.deviceName = deviceName;
-        this.online = false; // Default to offline
-    }
 }

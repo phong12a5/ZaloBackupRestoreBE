@@ -44,25 +44,22 @@ public class DeviceService {
     }
 
     // Called when a device connects via WebSocket
-    public Mono<Device> handleDeviceConnection(String deviceId, String userId /*, other device info */) {
-        log.info("Handling connection for device: {}", deviceId);
-        return deviceRepository.findById(deviceId)
-                .flatMap(device -> {
+    public Mono<Device> handleDeviceConnection(Device device) {
+        log.info("Handling connection for device: {}", device.getId());
+        return deviceRepository.findById(device.getId())
+                .flatMap(existingDevice -> {
                     // Device found, update status
-                    device.setOnline(true);
-                    device.setLastSeen(Instant.now());
-                    // TODO: Update other info if provided (e.g., appVersion, deviceName from handshake/initial message)
-                    log.debug("Updating existing device {} status to online", deviceId);
-                    return deviceRepository.save(device);
+                    existingDevice.setOnline(true);
+                    existingDevice.setLastSeen(Instant.now());
+                    log.debug("Updating existing device {} status to online", existingDevice.getId());
+                    return deviceRepository.save(existingDevice);
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     // Device not found, create and save a new one
-                    log.info("Device {} not found. Creating new device record for user {}.", deviceId, userId);
-                    // TODO: Get deviceName, os, appVersion from handshake or initial message if possible
-                    Device newDevice = new Device(deviceId, userId, "Unknown Device"); // Use a default name initially
-                    newDevice.setOnline(true);
-                    newDevice.setLastSeen(Instant.now());
-                    return deviceRepository.save(newDevice);
+                    log.info("Device {} not found. Creating new device record for user {}.", device.getId(), device.getUserId());
+                    device.setOnline(true);
+                    device.setLastSeen(Instant.now());
+                    return deviceRepository.save(device);
                 }));
     }
 
