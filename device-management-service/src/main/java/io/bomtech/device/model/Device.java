@@ -29,6 +29,9 @@ public class Device {
      * Possible values: INIT, BACKING_UP, UPLOADING, BACKUP_FAILED, UPLOAD_FAILED, CANCELED, COMPLETED
      */
     private String lastBackupStatus;
-    private String lastBackupAccountId;
+    /**
+     * Zalo Account ID currently logged in on the device.
+     */
+    private String activeAccountId;
     private Instant lastBackupTimestamp;
 }

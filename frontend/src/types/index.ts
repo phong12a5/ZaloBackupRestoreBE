@@ -7,8 +7,8 @@ export interface Device {
   appVersion?: string;
   lastSeen?: string; // ISO 8601 date string
   online: boolean;
+  activeAccountId?: string;
   lastBackupStatus?: string;
-  lastBackupAccountId?: string;
   lastBackupTimestamp?: string; // ISO 8601 date string
 }
 

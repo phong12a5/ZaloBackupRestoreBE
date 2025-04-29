@@ -33,7 +33,7 @@
           <td>{{ device.os || 'N/A' }}</td>
           <td>{{ device.appVersion || 'N/A' }}</td>
           <td>{{ formatTimestamp(device.lastSeen) }}</td>
-          <td>{{ device.lastBackupAccountId || 'N/A' }}</td> <!-- New Cell -->
+          <td>{{ device.activeAccountId || 'N/A' }}</td> <!-- New Cell -->
           <td>
              <span v-if="device.lastBackupTimestamp">
                {{ device.lastBackupStatus || 'Unknown' }} ({{ formatTimestamp(device.lastBackupTimestamp) }})
@@ -108,34 +108,39 @@ const handleWebSocketMessage = (event: MessageEvent) => {
     const deviceToUpdate = devices.value[deviceIndex];
 
     if (update.type === 'DEVICE_STATUS_UPDATE') {
-        // ... existing DEVICE_STATUS_UPDATE logic ...
-         if (update.payload.hasOwnProperty('online')) {
-            deviceToUpdate.online = update.payload.online;
+        // Handle online status
+        if (payload.hasOwnProperty('online')) {
+            deviceToUpdate.online = payload.online;
         }
-        if (update.payload.hasOwnProperty('lastSeen')) {
-            deviceToUpdate.lastSeen = update.payload.lastSeen;
+        // Handle last seen time
+        if (payload.hasOwnProperty('lastSeen')) {
+            deviceToUpdate.lastSeen = payload.lastSeen;
+        }
+        // Handle account ID update (added)
+        if (payload.hasOwnProperty('activeAccountId')) {
+             deviceToUpdate.activeAccountId = payload.activeAccountId;
         }
     } else if (update.type === 'BACKUP_STATUS_UPDATE') {
-        if (update.payload.hasOwnProperty('status')) {
-            const newStatus = update.payload.status;
+        // ... existing BACKUP_STATUS_UPDATE logic ...
+        if (payload.hasOwnProperty('status')) {
+            const newStatus = payload.status;
             deviceToUpdate.lastBackupStatus = newStatus;
-
-            // Update backupInProgress based on the new status
-            // Consider BACKING_UP, UPLOADING as in-progress states
+            // Update backupInProgress flag
             if (['BACKING_UP', 'UPLOADING'].includes(newStatus)) {
                  backupInProgress[deviceToUpdate.id] = true;
-            // Consider INIT, COMPLETED, FAILED (both types), CANCELED as final/inactive states
             } else if (['INIT', 'COMPLETED', 'BACKUP_FAILED', 'UPLOAD_FAILED', 'CANCELED'].includes(newStatus)) {
                  backupInProgress[deviceToUpdate.id] = false;
-            }
-            // Defaulting to false if status is not explicitly an in-progress one.
-            else {
+            } else {
                  backupInProgress[deviceToUpdate.id] = false;
                  console.warn(`Received unknown backup status: ${newStatus}`);
             }
         }
-         if (update.payload.hasOwnProperty('timestamp')) {
-             deviceToUpdate.lastBackupTimestamp = update.payload.timestamp;
+         if (payload.hasOwnProperty('timestamp')) {
+             deviceToUpdate.lastBackupTimestamp = payload.timestamp;
+         }
+         // Also update account ID if sent with backup status (redundant but safe)
+         if (payload.hasOwnProperty('accountId')) {
+              deviceToUpdate.activeAccountId = payload.accountId;
          }
     } else {
         console.warn(`Received unhandled message type: ${update.type}`);

@@ -149,7 +149,7 @@ public class DeviceService {
                  deviceId, zaloAccountId, status, message);
          return deviceRepository.findById(deviceId)
                  .flatMap(device -> {
-                     device.setLastBackupAccountId(zaloAccountId);
+                     device.setActiveAccountId(zaloAccountId);
                      device.setLastBackupStatus(status);
                      device.setLastBackupTimestamp(Instant.now());
                      // TODO: Potentially store the 'message' as well if needed
@@ -171,5 +171,43 @@ public class DeviceService {
                  })
                  .doOnError(e -> log.error("Failed to update backup status for device {}: {}", deviceId, e.getMessage()))
                  .then(); // Convert Mono<Device> to Mono<Void>
+    }
+
+    /**
+     * Updates only the activeAccountId for a given device and notifies web clients.
+     *
+     * @param deviceId  The ID of the device to update.
+     * @param accountId The new Zalo Account ID to set.
+     * @return A Mono emitting the updated Device, or empty if not found.
+     */
+    public Mono<Device> updateDeviceAccountId(String deviceId, String accountId) {
+        return deviceRepository.findById(deviceId)
+                .flatMap(device -> {
+                    log.info("Updating accountId for device {}: Old AccountId = {}, New AccountId = {}",
+                             deviceId, device.getActiveAccountId(), accountId);
+                    device.setActiveAccountId(accountId);
+                    // Optionally update lastSeen or another timestamp if needed
+                    // device.setLastSeen(Instant.now());
+                    return deviceRepository.save(device)
+                           .doOnSuccess(savedDevice -> {
+                               // Send update to web clients after successful save
+                               Map<String, Object> update = Map.of(
+                                   "type", "DEVICE_STATUS_UPDATE", // Use the same type
+                                   "payload", Map.of(
+                                       "deviceId", savedDevice.getId(),
+                                       "activeAccountId", savedDevice.getActiveAccountId() // Send the updated account ID
+                                       // Include other fields like online/lastSeen if they should be sent too
+                                   )
+                               );
+                               // Assuming userId is needed for routing, fetch it if not readily available
+                               // For simplicity, assuming device object has userId populated
+                               if (savedDevice.getUserId() != null) {
+                                    webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
+                               } else {
+                                    log.warn("Cannot send accountId update to web client for device {}: userId is null", deviceId);
+                               }
+                           });
+                })
+                .doOnError(error -> log.error("Error updating accountId for device {}: {}", deviceId, error.getMessage()));
     }
 }

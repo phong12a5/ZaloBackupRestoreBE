@@ -119,37 +119,68 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
         return null; // Or throw an exception / close session immediately
     }
 
-    // Placeholder for processing incoming messages
     private void processDeviceMessage(String deviceId, String userId, String message) {
         try {
             JsonNode root = objectMapper.readTree(message);
-            String messageType = root.path("type").asText(); // Expecting a "type" field in JSON
+            String messageType = root.path("type").asText();
+            JsonNode payload = root.path("payload"); // Get payload node
 
             log.info("Processing message type '{}' from device {}", messageType, deviceId);
             DeviceService deviceService = applicationContext.getBean(DeviceService.class);
 
             switch (messageType) {
+                case "DEVICE_STATUS_UPDATE":
+                    // Handle standard online/lastSeen updates (if present)
+                    boolean onlineStatusChanged = payload.has("online");
+                    boolean lastSeenChanged = payload.has("lastSeen"); // Assuming mobile might send this too
+
+                    if (onlineStatusChanged || lastSeenChanged) {
+                        // This part might need refinement depending on how handleDeviceConnection/Disconnection
+                        // updates status vs. just receiving updates.
+                        // For now, let's assume mobile sends explicit online=true/false
+                        // and we update based on that.
+                        log.info("Received DEVICE_STATUS_UPDATE for device {}: online={}, lastSeen={}",
+                                 deviceId,
+                                 payload.path("online").asText("N/A"),
+                                 payload.path("lastSeen").asText("N/A"));
+                        // TODO: Decide if a separate service method is needed for generic status updates
+                        // or if handleConnection/Disconnection covers the online/offline changes sufficiently.
+                        // For now, we'll focus on the accountId update part.
+                    }
+
+                    // Handle accountId update (if present)
+                    if (payload.has("accountId")) {
+                        String accountId = payload.path("accountId").asText();
+                        log.info("Received DEVICE_STATUS_UPDATE with accountId for device {}: AccountId={}", deviceId, accountId);
+                        // Call the specific service method to update only the accountId
+                        deviceService.updateDeviceAccountId(deviceId, accountId)
+                            .subscribe(
+                                updatedDevice -> log.info("Successfully updated accountId for device {}", deviceId),
+                                error -> log.error("Error processing accountId update for device {}: {}", deviceId, error.getMessage())
+                            );
+                    } else if (!onlineStatusChanged && !lastSeenChanged) {
+                         log.warn("Received DEVICE_STATUS_UPDATE for device {} with no actionable fields in payload: {}", deviceId, payload);
+                    }
+                    break;
+
                 case "BACKUP_STATUS_UPDATE":
-                    String status = root.path("payload").path("status").asText(); // e.g., "INIT", "BACKING_UP", "UPLOADING", "COMPLETED", "BACKUP_FAILED", "UPLOAD_FAILED", "CANCELED"
-                    String accountId = root.path("payload").path("accountId").asText(); // Zalo account being backed up
-                    String statusMessage = root.path("payload").path("message").asText(); // Optional: details
+                    // ... existing BACKUP_STATUS_UPDATE logic ...
+                    String status = payload.path("status").asText();
+                    String accountId = payload.path("accountId").asText();
+                    String statusMessage = payload.path("message").asText();
 
                     log.info("Received BACKUP_STATUS_UPDATE for device {}: Status={}, AccountId={}, Message='{}'",
                              deviceId, status, accountId, statusMessage);
 
-                    // Update the status first
                     deviceService.updateBackupStatus(deviceId, accountId, status, statusMessage)
-                        .flatMap(updatedDevice -> { // Use flatMap to chain the next operation conditionally
+                        .flatMap(updatedDevice -> {
                             if ("COMPLETED".equals(status)) {
-                                // If status is COMPLETED, extract details and save account info
-                                // Assumes accountName and phoneNumber are sent with the COMPLETED status update
-                                String accountName = root.path("payload").path("accountName").asText("Unknown"); // Provide default if missing
-                                String phoneNumber = root.path("payload").path("phoneNumber").asText(""); // Provide default if missing
+                                String accountName = payload.path("accountName").asText("Unknown");
+                                String phoneNumber = payload.path("phoneNumber").asText("");
                                 log.info("Backup COMPLETED for device {}, saving account details for AccountId={}", deviceId, accountId);
                                 return deviceService.saveBackedUpAccount(deviceId, userId, accountId, accountName, phoneNumber)
-                                        .thenReturn(updatedDevice); // Return the updated device after saving
+                                        .thenReturn(updatedDevice);
                             } else {
-                                // If status is not COMPLETED, just return the updated device
                                 return Mono.just(updatedDevice);
                             }
                         })
@@ -160,10 +191,6 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                     break;
 
                 // ... other cases ...
-                // case "HEARTBEAT":
-                //     log.debug("Received heartbeat from device {}", deviceId);
-                //     break;
-
                 default:
                     log.warn("Received unknown message type '{}' from device {}: {}", messageType, deviceId, message);
             }
