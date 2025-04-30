@@ -26,3 +26,8 @@ logging:
     root: INFO
     io.bomtech.device: DEBUG # Log chi tiết hơn cho package của bạn
     org.springframework.web.reactive.socket: DEBUG # Log WebSocket
+
+# Custom application properties
+app:
+  backup:
+    storage-path: /app/backups # Define the base path inside the container for storing backups

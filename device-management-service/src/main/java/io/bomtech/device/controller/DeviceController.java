@@ -5,10 +5,13 @@ import io.bomtech.device.model.Device;
 import io.bomtech.device.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -89,6 +92,34 @@ public class DeviceController {
                     });
         });
          // Error handled by @ExceptionHandler
+    }
+
+    // --- API Endpoint for Uploading Backup File ---
+    @PostMapping("/{deviceId}/backup/upload")
+    public Mono<ResponseEntity<String>> uploadBackupFile(
+            @PathVariable String deviceId,
+            @RequestHeader(USER_ID_HEADER) String userIdHeader,
+            @RequestPart("file") Mono<FilePart> filePartMono) { // Receive file as "file" part
+
+        return getUserIdFromHeader(userIdHeader).flatMap(userId ->
+            filePartMono.flatMap(filePart -> {
+                log.info("API request: Upload backup file for device {} by user {}", deviceId, userId);
+                // Delegate file saving to the service
+                return deviceService.saveBackupFile(userId, deviceId, filePart)
+                    .map(savedPath -> ResponseEntity.ok("File uploaded successfully to: " + savedPath)) // Return path on success
+                    .onErrorResume(e -> {
+                        log.error("Failed to upload backup file for device {}: {}", deviceId, e.getMessage());
+                        // Return appropriate error response based on exception type
+                        if (e instanceof SecurityException) { // Example: Permission denied
+                             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Permission denied to save file."));
+                        } else if (e instanceof java.io.IOException) { // Example: Disk full / IO error
+                             return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save file due to IO error."));
+                        }
+                        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file."));
+                    });
+            })
+        );
+        // Error for missing header handled by @ExceptionHandler
     }
 
     // Get all backed up accounts for the user specified in the header

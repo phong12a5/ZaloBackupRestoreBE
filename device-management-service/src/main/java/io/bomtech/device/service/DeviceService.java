@@ -8,11 +8,19 @@ import io.bomtech.device.websocket.DeviceWebSocketHandler;
 import io.bomtech.device.websocket.WebUpdatesWebSocketHandler; // Import new handler
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map; // For creating update payload
 
 @Service
@@ -22,8 +30,12 @@ public class DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final BackedUpAccountRepository backedUpAccountRepository;
-    private final DeviceWebSocketHandler deviceWebSocketHandler; // Handler for device connections
-    private final WebUpdatesWebSocketHandler webUpdatesWebSocketHandler; // Handler for web client updates
+    private final DeviceWebSocketHandler webSocketHandler;
+    private final WebUpdatesWebSocketHandler webUpdatesWebSocketHandler; // Declare the handler
+
+    // Inject storage path from application.yml
+    @Value("${app.backup.storage-path:/app/backups}") // Default path if not set
+    private String backupStoragePath;
 
     // --- Device Management ---
 
@@ -32,7 +44,7 @@ public class DeviceService {
         return deviceRepository.findByUserId(userId)
                 // Update online status based on WebSocket connection
                 .map(device -> {
-                    device.setOnline(deviceWebSocketHandler.isDeviceConnected(device.getId()));
+                    device.setOnline(webSocketHandler.isDeviceConnected(device.getId()));
                     return device;
                 });
     }
@@ -41,7 +53,7 @@ public class DeviceService {
         log.debug("Fetching device by ID: {}", deviceId);
         return deviceRepository.findById(deviceId)
                 .map(device -> {
-                    device.setOnline(deviceWebSocketHandler.isDeviceConnected(device.getId()));
+                    device.setOnline(webSocketHandler.isDeviceConnected(device.getId()));
                     return device;
                 });
     }
@@ -109,7 +121,7 @@ public class DeviceService {
         log.info("Initiating backup for device: {} by user: {}", deviceId, userId);
         // 1. Check if device exists and belongs to the user (optional but recommended)
         // 2. Check if device is online via WebSocketHandler
-        if (!deviceWebSocketHandler.isDeviceConnected(deviceId)) {
+        if (!webSocketHandler.isDeviceConnected(deviceId)) {
              log.warn("Cannot initiate backup: Device {} is offline.", deviceId);
              return Mono.error(new RuntimeException("Device " + deviceId + " is offline."));
         }
@@ -119,7 +131,7 @@ public class DeviceService {
         String backupCommand = "{\"command\": \"start_backup\"}"; // Simple example
 
         // 4. Send the command via WebSocketHandler
-        return deviceWebSocketHandler.sendCommandToDevice(deviceId, backupCommand)
+        return webSocketHandler.sendCommandToDevice(deviceId, backupCommand)
                 .doOnSuccess(v -> log.info("Backup command sent successfully to device {}", deviceId))
                 .doOnError(e -> log.error("Failed to send backup command to device {}: {}", deviceId, e.getMessage()));
         // Note: We don't wait for completion here. Status updates come via WebSocket messages.
@@ -209,5 +221,45 @@ public class DeviceService {
                            });
                 })
                 .doOnError(error -> log.error("Error updating accountId for device {}: {}", deviceId, error.getMessage()));
+    }
+
+    // --- Method to Save Uploaded Backup File ---
+    public Mono<String> saveBackupFile(String userId, String deviceId, FilePart filePart) {
+        // Create a unique filename (e.g., using timestamp)
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String originalFilename = filePart.filename();
+        // Sanitize filename (basic example, consider more robust sanitization)
+        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String filename = timestamp + "_" + sanitizedFilename;
+
+        // Create user-specific and device-specific directory structure
+        Path userDevicePath = Paths.get(backupStoragePath, userId, deviceId);
+        Path destinationPath = userDevicePath.resolve(filename);
+
+        log.info("Attempting to save backup file to: {}", destinationPath);
+
+        // Ensure directories exist
+        try {
+            Files.createDirectories(userDevicePath); // Create parent directories if they don't exist
+        } catch (IOException e) {
+            log.error("Failed to create directories for backup storage at {}: {}", userDevicePath, e.getMessage());
+            return Mono.error(new IOException("Could not create storage directory.", e)); // Propagate error
+        } catch (SecurityException e) {
+             log.error("Permission denied to create directories at {}: {}", userDevicePath, e.getMessage());
+             return Mono.error(new SecurityException("Permission denied for storage directory.", e));
+        }
+
+        // Transfer the file reactively
+        return filePart.transferTo(destinationPath)
+                .then(Mono.fromRunnable(() -> log.info("Successfully saved backup file: {}", destinationPath)))
+                .thenReturn(destinationPath.toString()) // Return the full path of the saved file
+                .onErrorMap(IOException.class, e -> { // Map IOExceptions during transfer
+                    log.error("IOException during file transfer to {}: {}", destinationPath, e.getMessage());
+                    return new IOException("Failed to save file due to IO error during transfer.", e);
+                })
+                 .onErrorMap(IllegalStateException.class, e -> { // Handle cases like file already transferred
+                    log.error("IllegalStateException during file transfer to {}: {}", destinationPath, e.getMessage());
+                    return new IOException("Failed to save file, possibly already processed.", e);
+                });
     }
 }

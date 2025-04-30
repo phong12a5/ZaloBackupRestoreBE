@@ -91,7 +91,7 @@ elif [ -n "$SERVICE_TO_BUILD" ]; then
   echo "Building specific service: $SERVICE_TO_BUILD..."
   if [ -d "./$SERVICE_TO_BUILD" ]; then
     # if is frontend or mongoDB, skip build
-    if [ "$SERVICE_TO_BUILD" = "frontend" ] || [ "$SERVICE_TO_BUILD" = "mongoDB" ]; then
+    if [ "$SERVICE_TO_BUILD" = "frontend" ] || [ "$SERVICE_TO_BUILD" = "mongodb" ]; then
       echo "Skipping build for $SERVICE_TO_BUILD."
     else
       if [ "$BUILD_SERVICE" = true ]; then

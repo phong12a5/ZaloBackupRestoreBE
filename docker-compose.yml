@@ -1,9 +1,9 @@
 services:
   eureka-server:
-    image: steeltoeoss/eureka-server:latest # Try Steeltoe OSS Eureka Server image
+    image: steeltoeoss/eureka-server:latest
     container_name: eureka-server
     ports:
-      - "8761:8761" # Default Eureka port
+      - "8761:8761"
     networks:
       - app-network
 
@@ -18,7 +18,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
-      - ./mongodb/mongo-data:/data/db
+      - ~/zalobr_data/mongo-data:/data/db
     networks:
       - app-network
       
@@ -74,17 +74,17 @@ services:
       dockerfile: Dockerfile
     container_name: device-management-service
     ports:
-      - "8083:8083" # Map port 8083
+      - "8083:8083"
     environment:
-      # Trỏ đến MongoDB, sử dụng database 'backupdb'
       - SPRING_DATA_MONGODB_URI=mongodb://admin:password@mongodb:27017/backupdb?authSource=admin
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      # Thêm các biến môi trường khác nếu cần
     depends_on:
       - mongodb
       - eureka-server
     networks:
       - app-network
+    volumes:
+      - ~/zalobr_data/backup_data:/app/backups # Mount local folder ./backup_data to /app/backups in container
 
   frontend:
     build:
@@ -95,11 +95,6 @@ services:
       - "80:80" # Map host port 80 to container port 80 (Nginx default)
     networks:
       - app-network
-    # depends_on: # Optional: Uncomment if frontend needs gateway to be ready
-    #   - api-gateway 
-
-# volumes:
-#   mongodb_data:
 
 networks:
   app-network:

@@ -130,25 +130,6 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
 
             switch (messageType) {
                 case "DEVICE_STATUS_UPDATE":
-                    // Handle standard online/lastSeen updates (if present)
-                    boolean onlineStatusChanged = payload.has("online");
-                    boolean lastSeenChanged = payload.has("lastSeen"); // Assuming mobile might send this too
-
-                    if (onlineStatusChanged || lastSeenChanged) {
-                        // This part might need refinement depending on how handleDeviceConnection/Disconnection
-                        // updates status vs. just receiving updates.
-                        // For now, let's assume mobile sends explicit online=true/false
-                        // and we update based on that.
-                        log.info("Received DEVICE_STATUS_UPDATE for device {}: online={}, lastSeen={}",
-                                 deviceId,
-                                 payload.path("online").asText("N/A"),
-                                 payload.path("lastSeen").asText("N/A"));
-                        // TODO: Decide if a separate service method is needed for generic status updates
-                        // or if handleConnection/Disconnection covers the online/offline changes sufficiently.
-                        // For now, we'll focus on the accountId update part.
-                    }
-
-                    // Handle accountId update (if present)
                     if (payload.has("accountId")) {
                         String accountId = payload.path("accountId").asText();
                         log.info("Received DEVICE_STATUS_UPDATE with accountId for device {}: AccountId={}", deviceId, accountId);
@@ -158,13 +139,10 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                                 updatedDevice -> log.info("Successfully updated accountId for device {}", deviceId),
                                 error -> log.error("Error processing accountId update for device {}: {}", deviceId, error.getMessage())
                             );
-                    } else if (!onlineStatusChanged && !lastSeenChanged) {
-                         log.warn("Received DEVICE_STATUS_UPDATE for device {} with no actionable fields in payload: {}", deviceId, payload);
                     }
                     break;
 
                 case "BACKUP_STATUS_UPDATE":
-                    // ... existing BACKUP_STATUS_UPDATE logic ...
                     String status = payload.path("status").asText();
                     String accountId = payload.path("accountId").asText();
                     String statusMessage = payload.path("message").asText();
@@ -189,8 +167,6 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                             error -> log.error("Error processing BACKUP_STATUS_UPDATE for device {}: {}", deviceId, error.getMessage())
                         );
                     break;
-
-                // ... other cases ...
                 default:
                     log.warn("Received unknown message type '{}' from device {}: {}", messageType, deviceId, message);
             }
