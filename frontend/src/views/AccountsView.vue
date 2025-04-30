@@ -12,7 +12,6 @@
     <table v-if="!isLoading && accounts.length > 0" class="accounts-table">
       <thead>
         <tr>
-          <th>Account Name</th>
           <th>Phone Number</th>
           <th>Backed Up From Device</th>
           <th>Backup Date</th>
@@ -21,8 +20,7 @@
       </thead>
       <tbody>
         <tr v-for="account in accounts" :key="account.id">
-          <td>{{ account.zaloName }}</td>
-          <td>{{ account.zaloPhone || 'N/A' }}</td>
+          <td>{{ account.zaloPhoneNumber || 'N/A' }}</td>
           <td>{{ getDeviceName(account.deviceId) }}</td>
           <td>{{ formatTimestamp(account.backupTimestamp) }}</td>
           <td>
@@ -86,7 +84,7 @@ const formatTimestamp = (timestamp?: string): string => {
 };
 
 const showRestoreInfo = (account: BackedUpAccount) => {
-    alert(`Restore function for ${account.zaloName} (ID: ${account.zaloAccountId}) is not yet implemented.\n\nDetails:\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
+    alert(`Restore function for ${account.zaloAccountName} (ID: ${account.zaloAccountId}) is not yet implemented.\n\nDetails:\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
 };
 
 // Fetch data when the component mounts

@@ -156,7 +156,7 @@ public class DeviceService {
     }
 
     // Method to handle backup status updates from devices
-    public Mono<Void> updateBackupStatus(String deviceId, String zaloAccountId, String status, String message) {
+    public Mono<Device> updateBackupStatus(String deviceId, String zaloAccountId, String status, String message) {
          log.info("Updating backup status for device {}: Account={}, Status={}, Message='{}'",
                  deviceId, zaloAccountId, status, message);
          return deviceRepository.findById(deviceId)
@@ -164,7 +164,6 @@ public class DeviceService {
                      device.setActiveAccountId(zaloAccountId);
                      device.setLastBackupStatus(status);
                      device.setLastBackupTimestamp(Instant.now());
-                     // TODO: Potentially store the 'message' as well if needed
                      return deviceRepository.save(device)
                             .doOnSuccess(savedDevice -> {
                                 // Send update to web clients
@@ -181,8 +180,7 @@ public class DeviceService {
                                 webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
                             });
                  })
-                 .doOnError(e -> log.error("Failed to update backup status for device {}: {}", deviceId, e.getMessage()))
-                 .then(); // Convert Mono<Device> to Mono<Void>
+                 .doOnError(e -> log.error("Failed to update backup status for device {}: {}", deviceId, e.getMessage()));
     }
 
     /**

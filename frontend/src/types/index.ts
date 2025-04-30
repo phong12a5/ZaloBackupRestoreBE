@@ -18,8 +18,8 @@ export interface BackedUpAccount {
   userId: string;
   deviceId: string;
   zaloAccountId: string;
-  zaloName: string;
-  zaloPhone?: string; // Optional
+  zaloAccountName: string;
+  zaloPhoneNumber?: string; // Optional
   backupTimestamp: string; // ISO 8601 date string
 }
 
