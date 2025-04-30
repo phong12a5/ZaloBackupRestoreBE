@@ -1,6 +1,6 @@
 <template>
   <div class="devices-view">
-    <h1>My Devices</h1>
+    <h2>My Devices</h2>
 
     <div v-if="isLoading" class="loading-message">Loading devices...</div>
     <div v-if="error" class="error-message">Error loading devices: {{ error }}</div>

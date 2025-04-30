@@ -1,6 +1,6 @@
 <template>
   <div class="accounts-view">
-    <h1>Backed Up Accounts</h1>
+    <h2>Backed Up Accounts</h2>
 
     <div v-if="isLoading" class="loading-message">Loading accounts...</div>
     <div v-if="error" class="error-message">Error loading accounts: {{ error }}</div>
