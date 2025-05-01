@@ -77,6 +77,11 @@ build_service() {
 }
 
 # Build specific service or all services
+# set up for use java 17
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
+echo "JAVA VERSION: $(java -version)"
+
 if [ "$BUILD_ALL" = true ]; then
   echo "Building all services..."
   if [ "$BUILD_SERVICE" = true ]; then

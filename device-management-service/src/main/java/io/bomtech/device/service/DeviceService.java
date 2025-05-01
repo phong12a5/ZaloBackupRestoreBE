@@ -9,6 +9,8 @@ import io.bomtech.device.websocket.WebUpdatesWebSocketHandler; // Import new han
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -36,6 +38,10 @@ public class DeviceService {
     // Inject storage path from application.yml
     @Value("${app.backup.storage-path:/app/backups}") // Default path if not set
     private String backupStoragePath;
+
+    // Inject APK path from application.properties
+    @Value("${mobile.apk.path}")
+    private String apkFilePath;
 
     // --- Device Management ---
 
@@ -259,5 +265,16 @@ public class DeviceService {
                     log.error("IllegalStateException during file transfer to {}: {}", destinationPath, e.getMessage());
                     return new IOException("Failed to save file, possibly already processed.", e);
                 });
+    }
+
+    // --- Method to get the APK file as a Resource ---
+    public Mono<Resource> getApkResource() {
+        Path path = Paths.get(apkFilePath);
+        log.info("Attempting to load APK from path: {}", path);
+        if (!Files.exists(path) || !Files.isReadable(path)) {
+            log.error("APK file not found or not readable at path: {}", apkFilePath);
+            return Mono.error(new IOException("APK file not found or not readable: " + apkFilePath));
+        }
+        return Mono.just(new FileSystemResource(path));
     }
 }

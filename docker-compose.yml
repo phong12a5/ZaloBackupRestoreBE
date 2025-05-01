@@ -85,7 +85,8 @@ services:
       - app-network
     volumes:
       - ~/zalobr_data/backup_data:/app/backups # Mount local folder ./backup_data to /app/backups in container
-
+      - ~/zalobr_data/apk:/app/apk # Mount local folder ./apk to /app/apk in container
+  
   frontend:
     build:
       context: ./frontend

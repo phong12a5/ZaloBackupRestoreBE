@@ -31,3 +31,7 @@ logging:
 app:
   backup:
     storage-path: /app/backups # Define the base path inside the container for storing backups
+
+mobile:
+  apk:
+    path: /app/apk/com.zing.zalo.xapks

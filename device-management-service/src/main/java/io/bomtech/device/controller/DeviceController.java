@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/devices")
@@ -120,6 +123,34 @@ public class DeviceController {
             })
         );
         // Error for missing header handled by @ExceptionHandler
+    }
+
+    // --- API Endpoint for Downloading APK ---
+    @GetMapping("/apk")
+    public Mono<ResponseEntity<Resource>> downloadApk() {
+        log.info("API request: Download APK file");
+        return deviceService.getApkResource()
+                .map(resource -> {
+                    HttpHeaders headers = new HttpHeaders();
+                    // Suggest a filename for the download
+                    headers.setContentDispositionFormData("attachment", "app-release.apk");
+                    // Set the correct content type for APK files
+                    headers.setContentType(MediaType.parseMediaType("application/vnd.android.package-archive"));
+
+                    // Spring Boot should automatically handle Content-Length for FileSystemResource
+                    return ResponseEntity.ok()
+                            .headers(headers)
+                            .body(resource);
+                })
+                .onErrorResume(e -> {
+                    log.error("API Error getting APK resource: {}", e.getMessage());
+                    // Handle specific errors like file not found
+                    if (e instanceof java.io.IOException && e.getMessage().contains("not found")) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
+                    }
+                    // Generic internal server error for other issues
+                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+                });
     }
 
     // Get all backed up accounts for the user specified in the header
