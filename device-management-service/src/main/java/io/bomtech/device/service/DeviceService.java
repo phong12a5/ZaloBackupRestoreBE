@@ -162,12 +162,13 @@ public class DeviceService {
     }
 
     // Method to handle backup status updates from devices
-    public Mono<Device> updateBackupStatus(String deviceId, String zaloAccountId, String status, String message) {
+    public Mono<Device> updateBackupStatus(String deviceId, String zaloAccountId, String zaloPhoneNumber, String status, String message) {
          log.info("Updating backup status for device {}: Account={}, Status={}, Message='{}'",
                  deviceId, zaloAccountId, status, message);
          return deviceRepository.findById(deviceId)
                  .flatMap(device -> {
                      device.setActiveAccountId(zaloAccountId);
+                     device.setActiveAccountPhone(zaloPhoneNumber);
                      device.setLastBackupStatus(status);
                      device.setLastBackupTimestamp(Instant.now());
                      return deviceRepository.save(device)
@@ -196,12 +197,13 @@ public class DeviceService {
      * @param accountId The new Zalo Account ID to set.
      * @return A Mono emitting the updated Device, or empty if not found.
      */
-    public Mono<Device> updateDeviceAccountId(String deviceId, String accountId) {
+    public Mono<Device> updateDeviceAccountId(String deviceId, String accountId, String accountPhone) {
         return deviceRepository.findById(deviceId)
                 .flatMap(device -> {
                     log.info("Updating accountId for device {}: Old AccountId = {}, New AccountId = {}",
                              deviceId, device.getActiveAccountId(), accountId);
                     device.setActiveAccountId(accountId);
+                    device.setActiveAccountPhone(accountPhone); // Update phone number if provided
                     // Optionally update lastSeen or another timestamp if needed
                     // device.setLastSeen(Instant.now());
                     return deviceRepository.save(device)
@@ -211,7 +213,8 @@ public class DeviceService {
                                    "type", "DEVICE_STATUS_UPDATE", // Use the same type
                                    "payload", Map.of(
                                        "deviceId", savedDevice.getId(),
-                                       "activeAccountId", savedDevice.getActiveAccountId() // Send the updated account ID
+                                       "activeAccountId", savedDevice.getActiveAccountId(), // Send the updated account ID
+                                       "activeAccountPhone", savedDevice.getActiveAccountPhone()
                                        // Include other fields like online/lastSeen if they should be sent too
                                    )
                                );

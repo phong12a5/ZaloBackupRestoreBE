@@ -33,7 +33,7 @@
           <td>{{ device.os || 'N/A' }}</td>
           <td>{{ device.appVersion || 'N/A' }}</td>
           <td>{{ formatTimestamp(device.lastSeen) }}</td>
-          <td>{{ device.activeAccountId || 'N/A' }}</td> <!-- New Cell -->
+          <td>{{ device.activeAccountPhone || 'N/A' }}</td> <!-- New Cell -->
           <td>
              <span v-if="device.lastBackupTimestamp">
                {{ device.lastBackupStatus || 'Unknown' }} ({{ formatTimestamp(device.lastBackupTimestamp) }})
@@ -117,8 +117,8 @@ const handleWebSocketMessage = (event: MessageEvent) => {
             deviceToUpdate.lastSeen = payload.lastSeen;
         }
         // Handle account ID update (added)
-        if (payload.hasOwnProperty('activeAccountId')) {
-             deviceToUpdate.activeAccountId = payload.activeAccountId;
+        if (payload.hasOwnProperty('activeAccountPhone')) {
+            deviceToUpdate.activeAccountPhone = payload.activeAccountPhone;
         }
     } else if (update.type === 'BACKUP_STATUS_UPDATE') {
         // ... existing BACKUP_STATUS_UPDATE logic ...
@@ -137,10 +137,6 @@ const handleWebSocketMessage = (event: MessageEvent) => {
         }
          if (payload.hasOwnProperty('timestamp')) {
              deviceToUpdate.lastBackupTimestamp = payload.timestamp;
-         }
-         // Also update account ID if sent with backup status (redundant but safe)
-         if (payload.hasOwnProperty('accountId')) {
-              deviceToUpdate.activeAccountId = payload.accountId;
          }
     } else {
         console.warn(`Received unhandled message type: ${update.type}`);

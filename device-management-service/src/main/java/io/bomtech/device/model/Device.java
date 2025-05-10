@@ -33,5 +33,6 @@ public class Device {
      * Zalo Account ID currently logged in on the device.
      */
     private String activeAccountId;
+    private String activeAccountPhone;
     private Instant lastBackupTimestamp;
 }

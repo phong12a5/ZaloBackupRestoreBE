@@ -130,11 +130,11 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
 
             switch (messageType) {
                 case "DEVICE_STATUS_UPDATE":
-                    if (payload.has("accountId")) {
+                    if (payload.has("phoneNumber")) {
                         String accountId = payload.path("accountId").asText();
-                        log.info("Received DEVICE_STATUS_UPDATE with accountId for device {}: AccountId={}", deviceId, accountId);
-                        // Call the specific service method to update only the accountId
-                        deviceService.updateDeviceAccountId(deviceId, accountId)
+                        String phoneNumber = payload.path("phoneNumber").asText();
+                        log.info("Received DEVICE_STATUS_UPDATE with accountId for device {}: phoneNumber={}", deviceId, phoneNumber);
+                        deviceService.updateDeviceAccountId(deviceId, accountId, phoneNumber)
                             .subscribe(
                                 updatedDevice -> log.info("Successfully updated accountId for device {}", deviceId),
                                 error -> log.error("Error processing accountId update for device {}: {}", deviceId, error.getMessage())
@@ -144,17 +144,18 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
 
                 case "BACKUP_STATUS_UPDATE":
                     String status = payload.path("status").asText();
-                    String accountId = payload.path("accountId").asText();
                     String statusMessage = payload.path("message").asText();
+                    String accountId = payload.has("accountId") ? payload.path("accountId").asText() : "";
+                    String accountName = payload.has("accountName") ? payload.path("accountName").asText() : "";
+                    String phoneNumber = payload.has("phoneNumber") ? payload.path("phoneNumber").asText() : "";
+
 
                     log.info("Received BACKUP_STATUS_UPDATE for device {}: Status={}, AccountId={}, Message='{}'",
                              deviceId, status, accountId, statusMessage);
 
-                    deviceService.updateBackupStatus(deviceId, accountId, status, statusMessage)
+                    deviceService.updateBackupStatus(deviceId, accountId, phoneNumber, status, statusMessage)
                         .flatMap(updatedDevice -> {
                             if ("COMPLETED".equals(status)) {
-                                String accountName = payload.path("accountName").asText("Unknown");
-                                String phoneNumber = payload.path("phoneNumber").asText("");
                                 log.info("Backup COMPLETED for device {}, saving account details for AccountId={}", deviceId, accountId);
                                 return deviceService.saveBackedUpAccount(deviceId, userId, accountId, accountName, phoneNumber)
                                         .thenReturn(updatedDevice);
