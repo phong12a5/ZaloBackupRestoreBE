@@ -118,43 +118,44 @@ public class DeviceService {
                                webUpdatesWebSocketHandler.sendUpdateToUser(savedDevice.getUserId(), update);
                            });
                 })
-                .then(); // Convert Mono<Device> to Mono<Void>
+                .then();
     }
-
-    // --- Backup Orchestration ---
 
     public Mono<Void> initiateBackup(String userId, String deviceId /*, potentially specific accountId */) {
         log.info("Initiating backup for device: {} by user: {}", deviceId, userId);
-        // 1. Check if device exists and belongs to the user (optional but recommended)
-        // 2. Check if device is online via WebSocketHandler
         if (!webSocketHandler.isDeviceConnected(deviceId)) {
              log.warn("Cannot initiate backup: Device {} is offline.", deviceId);
              return Mono.error(new RuntimeException("Device " + deviceId + " is offline."));
         }
 
-        // 3. Construct the backup command (e.g., JSON message)
-        //    This command structure needs to be agreed upon with the mobile app team.
-        String backupCommand = "{\"command\": \"start_backup\"}"; // Simple example
+        String backupCommand = "{\"command\": \"start_backup\"}";
 
-        // 4. Send the command via WebSocketHandler
         return webSocketHandler.sendCommandToDevice(deviceId, backupCommand)
                 .doOnSuccess(v -> log.info("Backup command sent successfully to device {}", deviceId))
                 .doOnError(e -> log.error("Failed to send backup command to device {}: {}", deviceId, e.getMessage()));
-        // Note: We don't wait for completion here. Status updates come via WebSocket messages.
     }
 
-    // Called from WebSocketHandler when a "backup complete" message is received
     public Mono<BackedUpAccount> saveBackedUpAccount(String deviceId, String userId, String zaloAccountId, String zaloName, String zaloPhone) {
-         log.info("Saving backed up account info for device {}, accountId {}", deviceId, zaloAccountId);
-         // Consider checking if an entry for this user/zaloAccountId already exists
-         // and update it instead of creating duplicates, or handle based on requirements.
-         BackedUpAccount account = new BackedUpAccount(userId, deviceId, zaloAccountId, zaloName, zaloPhone);
-         return backedUpAccountRepository.save(account)
-                 .doOnSuccess(saved -> log.info("Successfully saved backed up account: {}", saved.getId()))
-                 .doOnError(e -> log.error("Failed to save backed up account for device {}: {}", deviceId, e.getMessage()));
-    }
+         log.info("Saving backed up account info for device {}, userId {}, accountId {}", deviceId, userId, zaloAccountId);
 
-    // --- Backed Up Account Retrieval ---
+         return backedUpAccountRepository.findByUserIdAndZaloAccountId(userId, zaloAccountId)
+                .flatMap(existingAccount -> {
+                    log.info("BackedUpAccount for userId {} and zaloAccountId {} already exists. Updating details.", userId, zaloAccountId);
+                    existingAccount.setZaloAccountName(zaloName);
+                    existingAccount.setZaloPhoneNumber(zaloPhone);
+                    existingAccount.setDeviceId(deviceId); 
+                    existingAccount.setBackupTimestamp(Instant.now());
+                    return backedUpAccountRepository.save(existingAccount)
+                            .doOnSuccess(updated -> log.info("Successfully updated existing backed up account: {}", updated.getId()));
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("No existing BackedUpAccount found for userId {} and zaloAccountId {}. Creating new entry.", userId, zaloAccountId);
+                    BackedUpAccount newAccount = new BackedUpAccount(userId, deviceId, zaloAccountId, zaloName, zaloPhone);
+                    return backedUpAccountRepository.save(newAccount)
+                            .doOnSuccess(saved -> log.info("Successfully saved new backed up account: {}", saved.getId()));
+                }))
+                .doOnError(e -> log.error("Failed to save or update backed up account for userId {}, zaloAccountId {}: {}", userId, zaloAccountId, e.getMessage()));
+    }
 
     public Flux<BackedUpAccount> getBackedUpAccountsByUserId(String userId) {
         log.debug("Fetching backed up accounts for user: {}", userId);
