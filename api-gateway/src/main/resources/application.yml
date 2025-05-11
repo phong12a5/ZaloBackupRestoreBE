@@ -27,23 +27,32 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/users/**
+          filters:
+            - CustomAuthFilter=USER,ADMIN
 
         # Route for device-management-service HTTP APIs
         - id: device-management-service-http
           uri: lb://device-management-service # Use Eureka service name
           predicates:
             - Path=/api/devices/** # Match all paths under /api/devices/
+          filters:
+            - CustomAuthFilter=USER,ADMIN
 
         # Route for device-management-service WebSocket (Mobile App)
         - id: device-management-service-ws-mobile
           uri: ws://device-management-service:8083
           predicates:
             - Path=/ws/device/**
+          filters:
+            - CustomAuthFilter=USER,ADMIN
+
         # Route for device-management-service WebSocket (Web Frontend)
         - id: device-management-service-ws-web
           uri: ws://device-management-service:8083
           predicates:
             - Path=/ws/web/updates/**
+          filters:
+            - CustomAuthFilter=USER,ADMIN
 
   data:
     mongodb:
@@ -60,9 +69,3 @@ eureka:
 
 jwt:
   secret: y8J3nD9kL2pQ5xR7vT1wZ6mB4aF8oC0sE3uH9gK7tV2qX5r
-
-# management:
-#   endpoints:
-#     web:
-#       exposure:
-#         include: "*"

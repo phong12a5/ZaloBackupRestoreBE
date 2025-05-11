@@ -6,18 +6,15 @@ package io.bomtech.auth.dto;
 
 public class RegisterRequest {
 
-    // @NotBlank // Add validation if using spring-boot-starter-validation
     private String username;
 
-    // @NotBlank
     private String password;
 
-    // @NotBlank
-    // @Email
     private String email;
 
-    // @NotBlank
     private String fullname;
+
+    private String role;
 
     // Getters and Setters
     public String getUsername() {
@@ -50,5 +47,13 @@ public class RegisterRequest {
 
     public void setFullname(String fullname) {
         this.fullname = fullname;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }
