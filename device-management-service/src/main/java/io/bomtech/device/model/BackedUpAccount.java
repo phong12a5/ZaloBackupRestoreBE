@@ -25,17 +25,19 @@ public class BackedUpAccount {
     private String zaloAccountId; // Unique identifier for the Zalo account
     private String zaloAccountName; // Display name
     private String zaloPhoneNumber; // Phone number (optional, consider privacy)
+    private String backupFilePath; // Path to the backup file in storage
     private Instant backupTimestamp; // When the backup was completed
     // Add other relevant fields as needed
     // private String backupDataLocation;
     // private Map<String, Object> otherMetadata;
 
-    public BackedUpAccount(String userId, String deviceId, String zaloAccountId, String zaloAccountName, String zaloPhoneNumber) {
+    public BackedUpAccount(String userId, String deviceId, String zaloAccountId, String zaloAccountName, String zaloPhoneNumber, String backupFilePath) {
         this.userId = userId;
         this.deviceId = deviceId;
         this.zaloAccountId = zaloAccountId;
         this.zaloAccountName = zaloAccountName;
         this.zaloPhoneNumber = zaloPhoneNumber;
+        this.backupFilePath = backupFilePath;
         this.backupTimestamp = Instant.now(); // Set timestamp on creation
     }
 }

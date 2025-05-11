@@ -135,7 +135,7 @@ public class DeviceService {
                 .doOnError(e -> log.error("Failed to send backup command to device {}: {}", deviceId, e.getMessage()));
     }
 
-    public Mono<BackedUpAccount> saveBackedUpAccount(String deviceId, String userId, String zaloAccountId, String zaloName, String zaloPhone) {
+    public Mono<BackedUpAccount> saveBackedUpAccount(String deviceId, String userId, String zaloAccountId, String zaloName, String zaloPhone, String backupFilePath) {
          log.info("Saving backed up account info for device {}, userId {}, accountId {}", deviceId, userId, zaloAccountId);
 
          return backedUpAccountRepository.findByUserIdAndZaloAccountId(userId, zaloAccountId)
@@ -144,13 +144,14 @@ public class DeviceService {
                     existingAccount.setZaloAccountName(zaloName);
                     existingAccount.setZaloPhoneNumber(zaloPhone);
                     existingAccount.setDeviceId(deviceId); 
+                    existingAccount.setBackupFilePath(backupFilePath);
                     existingAccount.setBackupTimestamp(Instant.now());
                     return backedUpAccountRepository.save(existingAccount)
                             .doOnSuccess(updated -> log.info("Successfully updated existing backed up account: {}", updated.getId()));
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     log.info("No existing BackedUpAccount found for userId {} and zaloAccountId {}. Creating new entry.", userId, zaloAccountId);
-                    BackedUpAccount newAccount = new BackedUpAccount(userId, deviceId, zaloAccountId, zaloName, zaloPhone);
+                    BackedUpAccount newAccount = new BackedUpAccount(userId, deviceId, zaloAccountId, zaloName, zaloPhone, backupFilePath);
                     return backedUpAccountRepository.save(newAccount)
                             .doOnSuccess(saved -> log.info("Successfully saved new backed up account: {}", saved.getId()));
                 }))

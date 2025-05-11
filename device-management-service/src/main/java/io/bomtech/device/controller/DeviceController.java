@@ -1,5 +1,6 @@
 package io.bomtech.device.controller;
 
+import io.bomtech.device.dto.FileUploadResponse; // Import the new DTO
 import io.bomtech.device.model.BackedUpAccount;
 import io.bomtech.device.model.Device;
 import io.bomtech.device.service.DeviceService;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.server.ResponseStatusException; // Import for explicit error handling
 
 @RestController
 @RequestMapping("/api/devices")
@@ -31,8 +33,8 @@ public class DeviceController {
     private Mono<String> getUserIdFromHeader(String userIdHeader) {
         if (!StringUtils.hasText(userIdHeader)) {
             log.warn("Missing or empty {} header", USER_ID_HEADER); // Log correct header name
-            // Return an error Mono that translates to 401 Unauthorized
-            return Mono.error(new MissingUserIdHeaderException("Unauthorized: Missing user ID header"));
+            // Using ResponseStatusException for clearer error propagation
+            return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Missing user ID header"));
         }
         return Mono.just(userIdHeader);
     }
@@ -77,13 +79,11 @@ public class DeviceController {
          // Error handled by @ExceptionHandler
     }
 
-    // Endpoint to trigger the backup process on a device
     @PostMapping("/{deviceId}/backup")
     public Mono<ResponseEntity<Void>> requestBackup(@PathVariable String deviceId,
-                                                    @RequestHeader(USER_ID_HEADER) String userIdHeader) { // Read correct header
+                                                    @RequestHeader(USER_ID_HEADER) String userIdHeader) {
         return getUserIdFromHeader(userIdHeader).flatMap(userId -> {
             log.info("API request: Initiate backup for device {} by user {}", deviceId, userId);
-            // TODO: Add ownership check in DeviceService before initiating if needed
             return deviceService.initiateBackup(userId, deviceId)
                     .then(Mono.just(ResponseEntity.accepted().<Void>build()))
                     .onErrorResume(e -> {
@@ -94,38 +94,48 @@ public class DeviceController {
                         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
                     });
         });
-         // Error handled by @ExceptionHandler
     }
 
-    // --- API Endpoint for Uploading Backup File ---
     @PostMapping("/{deviceId}/backup/upload")
-    public Mono<ResponseEntity<String>> uploadBackupFile(
+    public Mono<ResponseEntity<FileUploadResponse>> uploadBackupFile(
             @PathVariable String deviceId,
             @RequestHeader(USER_ID_HEADER) String userIdHeader,
-            @RequestPart("file") Mono<FilePart> filePartMono) { // Receive file as "file" part
+            @RequestPart("file") Mono<FilePart> filePartMono) {
 
         return getUserIdFromHeader(userIdHeader).flatMap(userId ->
             filePartMono.flatMap(filePart -> {
                 log.info("API request: Upload backup file for device {} by user {}", deviceId, userId);
-                // Delegate file saving to the service
                 return deviceService.saveBackupFile(userId, deviceId, filePart)
-                    .map(savedPath -> ResponseEntity.ok("File uploaded successfully to: " + savedPath)) // Return path on success
+                    .map(savedPath -> {
+                        FileUploadResponse response = new FileUploadResponse("File uploaded successfully.", savedPath);
+                        return ResponseEntity.ok(response);
+                    })
                     .onErrorResume(e -> {
-                        log.error("Failed to upload backup file for device {}: {}", deviceId, e.getMessage());
-                        // Return appropriate error response based on exception type
-                        if (e instanceof SecurityException) { // Example: Permission denied
-                             return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body("Permission denied to save file."));
-                        } else if (e instanceof java.io.IOException) { // Example: Disk full / IO error
-                             return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save file due to IO error."));
+                        log.error("Failed to upload backup file for device {}: {}", deviceId, e.getMessage(), e); // Log exception too
+                        String errorMessage = "Failed to upload file.";
+                        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+                        String errorFilePath = null;
+
+                        if (e instanceof SecurityException) {
+                            errorMessage = "Permission denied to save file.";
+                            status = HttpStatus.FORBIDDEN;
+                        } else if (e instanceof java.io.IOException) {
+                            errorMessage = "Failed to save file due to IO error.";
+                        } else if (e instanceof ResponseStatusException) {
+                            ResponseStatusException rse = (ResponseStatusException) e;
+                            FileUploadResponse errorResponse = new FileUploadResponse(rse.getReason(), null);
+                            return Mono.just(ResponseEntity.status(rse.getStatusCode()).body(errorResponse));
                         }
-                        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file."));
+                        FileUploadResponse errorResponse = new FileUploadResponse(errorMessage, errorFilePath);
+                        return Mono.just(ResponseEntity.status(status).body(errorResponse));
                     });
             })
-        );
-        // Error for missing header handled by @ExceptionHandler
+        ).onErrorResume(ResponseStatusException.class, e -> {
+            FileUploadResponse errorResponse = new FileUploadResponse(e.getReason(), null);
+            return Mono.just(ResponseEntity.status(e.getStatusCode()).body(errorResponse));
+        });
     }
 
-    // --- API Endpoint for Downloading APK ---
     @GetMapping("/apk")
     public Mono<ResponseEntity<Resource>> downloadApk() {
         log.info("API request: Download APK file");

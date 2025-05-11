@@ -148,6 +148,7 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                     String accountId = payload.has("accountId") ? payload.path("accountId").asText() : "";
                     String accountName = payload.has("accountName") ? payload.path("accountName").asText() : "";
                     String phoneNumber = payload.has("phoneNumber") ? payload.path("phoneNumber").asText() : "";
+                    String backupPath = payload.has("backupPath") ? payload.path("backupPath").asText() : "";
 
 
                     log.info("Received BACKUP_STATUS_UPDATE for device {}: Status={}, AccountId={}, Message='{}'",
@@ -157,7 +158,7 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                         .flatMap(updatedDevice -> {
                             if ("COMPLETED".equals(status)) {
                                 log.info("Backup COMPLETED for device {}, saving account details for AccountId={}", deviceId, accountId);
-                                return deviceService.saveBackedUpAccount(deviceId, userId, accountId, accountName, phoneNumber)
+                                return deviceService.saveBackedUpAccount(deviceId, userId, accountId, accountName, phoneNumber, backupPath)
                                         .thenReturn(updatedDevice);
                             } else {
                                 return Mono.just(updatedDevice);
