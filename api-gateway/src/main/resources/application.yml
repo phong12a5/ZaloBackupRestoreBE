@@ -28,7 +28,7 @@ spring:
           predicates:
             - Path=/users/**
           filters:
-            - CustomAuthFilter=USER,ADMIN
+            # - CustomAuthFilter=USER,ADMIN
 
         # Route for device-management-service HTTP APIs
         - id: device-management-service-http
@@ -36,7 +36,7 @@ spring:
           predicates:
             - Path=/api/devices/** # Match all paths under /api/devices/
           filters:
-            - CustomAuthFilter=USER,ADMIN
+            # - CustomAuthFilter=USER,ADMIN
 
         # Route for device-management-service WebSocket (Mobile App)
         - id: device-management-service-ws-mobile
@@ -44,7 +44,7 @@ spring:
           predicates:
             - Path=/ws/device/**
           filters:
-            - CustomAuthFilter=USER,ADMIN
+            # - CustomAuthFilter=USER,ADMIN
 
         # Route for device-management-service WebSocket (Web Frontend)
         - id: device-management-service-ws-web
@@ -52,7 +52,7 @@ spring:
           predicates:
             - Path=/ws/web/updates/**
           filters:
-            - CustomAuthFilter=USER,ADMIN
+            # - CustomAuthFilter=USER,ADMIN
 
   data:
     mongodb:

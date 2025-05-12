@@ -24,7 +24,7 @@
           <td>{{ getDeviceName(account.deviceId) }}</td>
           <td>{{ formatTimestamp(account.backupTimestamp) }}</td>
           <td>
-            <button class="action-button restore-button" @click="showRestoreInfo(account)" title="Restore function not implemented yet">Restore Info</button>
+            <button class="action-button restore-button" @click="showRestoreInfo(account)" title="Restore Info">Restore Info</button>
             <!-- Add 'Delete Backup' later -->
           </td>
         </tr>
@@ -84,7 +84,7 @@ const formatTimestamp = (timestamp?: string): string => {
 };
 
 const showRestoreInfo = (account: BackedUpAccount) => {
-    alert(`Restore function for ${account.zaloAccountName} (ID: ${account.zaloAccountId}) is not yet implemented.\n\nDetails:\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
+    alert(`Restore information for ${account.zaloPhoneNumber} (ID: ${account.zaloAccountId})\n\nName: ${account.zaloAccountName}\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
 };
 
 // Fetch data when the component mounts
