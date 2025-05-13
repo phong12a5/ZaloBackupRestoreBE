@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map; // For creating update payload
 
 @Service
@@ -339,5 +340,42 @@ public class DeviceService {
                     return Mono.error(new IOException("Backup record not found for id: " + backedUpAccountId)); // Or a custom NotFoundException
                 }))
                 .doOnError(e -> log.error("Error during backup file download for accountId {}: {}", backedUpAccountId, e.getMessage()));
+    }
+
+    public Flux<BackedUpAccount> transferBackedUpAccounts(List<String> backedUpAccountIds, String targetUserId, String requestingUserId) {
+        log.info("User {} attempting to transfer {} accounts to user {}", requestingUserId, backedUpAccountIds.size(), targetUserId);
+        if (requestingUserId.equals(targetUserId)) {
+            log.warn("Requesting user {} and target user {} are the same. No transfer needed.", requestingUserId, targetUserId);
+            return Flux.error(new IllegalArgumentException("Target user cannot be the same as the current owner."));
+        }
+
+        // It's important to ensure the targetUserId is a valid, existing user.
+        // This might involve a call to the user-service. For this example, we'll assume it's valid.
+        // if (!userService.isValidUser(targetUserId)) { // Pseudocode for user validation
+        //    return Flux.error(new IllegalArgumentException("Target user ID is not valid."));
+        // }
+
+        return Flux.fromIterable(backedUpAccountIds)
+            .flatMap(accountId -> backedUpAccountRepository.findById(accountId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Transfer failed: BackedUpAccount with id {} not found.", accountId);
+                    // Optionally, collect these errors and return a partial success/failure response
+                    return Mono.error(new RuntimeException("Account not found: " + accountId)); // Or a custom NotFoundException
+                }))
+                .flatMap(account -> {
+                    if (!account.getUserId().equals(requestingUserId)) {
+                        log.warn("User {} is not authorized to transfer account {}. Current owner: {}",
+                                 requestingUserId, accountId, account.getUserId());
+                        return Mono.error(new SecurityException("Unauthorized to transfer account: " + accountId));
+                    }
+                    log.debug("Transferring account {} from user {} to user {}", accountId, account.getUserId(), targetUserId);
+                    account.setUserId(targetUserId);
+                    // Potentially update other fields, e.g., clear deviceId if it's user-specific
+                    // account.setDeviceId(null); 
+                    return backedUpAccountRepository.save(account)
+                        .doOnSuccess(savedAccount -> log.info("Successfully transferred account {} to user {}", savedAccount.getId(), targetUserId))
+                        .doOnError(err -> log.error("Error saving transferred account {}: {}", accountId, err.getMessage()));
+                })
+            );
     }
 }

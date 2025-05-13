@@ -4,9 +4,13 @@
 
     <!-- Search and Actions Bar -->
     <div class="actions-bar">
-      <input type="text" v-model="searchQuery" placeholder="Search by phone, name, device..." class="search-input">
-      <button class="action-button main-action-button" @click="handleSelectedAction" :disabled="selectedAccountIds.length === 0">
-        Action on Selected ({{ selectedAccountIds.length }})
+      <textarea 
+        v-model="searchQuery" 
+        placeholder="Enter phone numbers (one per line, format: phonenumber OR phonenumber|password)" 
+        class="search-textarea">
+      </textarea>
+      <button class="action-button main-action-button" @click="handleTransferAccount" :disabled="selectedAccountIds.length === 0">
+        Transfer ({{ selectedAccountIds.length }})
       </button>
     </div>
 
@@ -78,17 +82,35 @@ const fetchAccountsAndDevices = async () => {
 
 // Filtered accounts based on search query
 const filteredAccounts = computed(() => {
-  if (!searchQuery.value) {
-    return accounts.value;
+  const query = searchQuery.value.trim();
+  if (!query) {
+    return accounts.value; // Return all accounts if search query is empty
   }
-  const lowerSearchQuery = searchQuery.value.toLowerCase();
+
+  const searchLines = query.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (searchLines.length === 0) {
+    return []; // No valid search lines, so no results
+  }
+
+  const phoneNumbersToSearch = searchLines.map(line => {
+    const parts = line.split('|');
+    return parts[0].trim().toLowerCase(); // Get phone number part, normalize
+  }).filter(phone => phone.length > 0); // Ensure we have actual phone numbers
+
+  if (phoneNumbersToSearch.length === 0) {
+    return []; // No valid phone numbers extracted, so no results
+  }
+
   return accounts.value.filter(account => {
-    return (
-      account.zaloPhoneNumber?.toLowerCase().includes(lowerSearchQuery) ||
-      account.zaloAccountName?.toLowerCase().includes(lowerSearchQuery) ||
-      getDeviceName(account.deviceId).toLowerCase().includes(lowerSearchQuery) ||
-      account.zaloAccountId?.toLowerCase().includes(lowerSearchQuery)
-    );
+    const accountPhoneNumber = account.zaloPhoneNumber?.trim().toLowerCase();
+    if (!accountPhoneNumber) {
+      return false;
+    }
+    // Check if the account's phone number is in our list of numbers to search
+    return phoneNumbersToSearch.includes(accountPhoneNumber);
   });
 });
 
@@ -133,7 +155,7 @@ const showRestoreInfo = (account: BackedUpAccount) => {
 };
 
 // Placeholder for action on selected accounts
-const handleSelectedAction = () => {
+const handleTransferAccount = () => {
   if (selectedAccountIds.value.length === 0) {
     alert('Please select at least one account.');
     return;
@@ -166,6 +188,18 @@ onMounted(fetchAccountsAndDevices);
   font-size: 0.9rem;
   flex-grow: 1;
   margin-right: 1rem;
+}
+
+.search-textarea { /* Added style for textarea */
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  flex-grow: 1;
+  margin-right: 1rem;
+  min-height: 20px; /* Adjust as needed */
+  resize: vertical; /* Allow vertical resize */
+  font-family: inherit; /* Ensure consistent font */
 }
 
 .main-action-button {

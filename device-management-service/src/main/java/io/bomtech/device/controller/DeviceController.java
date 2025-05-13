@@ -1,6 +1,7 @@
 package io.bomtech.device.controller;
 
 import io.bomtech.device.dto.FileUploadResponse; // Import the new DTO
+import io.bomtech.device.dto.TransferAccountsRequest;
 import io.bomtech.device.model.BackedUpAccount;
 import io.bomtech.device.model.Device;
 import io.bomtech.device.service.DeviceService;
@@ -245,5 +246,51 @@ public class DeviceController {
             // Handle cases where getUserIdFromHeader fails (e.g., missing header)
             Mono.just(ResponseEntity.status(e.getStatusCode()).<Resource>body(null)) // Ensure type
         );
+    }
+
+    @PostMapping("/backups/transfer")
+    public Mono<ResponseEntity<Flux<BackedUpAccount>>> transferAccounts(
+            @RequestHeader(USER_ID_HEADER) String userIdHeader,
+            @RequestBody TransferAccountsRequest transferRequest) {
+
+        return getUserIdFromHeader(userIdHeader).flatMap(requestingUserId -> {
+            log.info("API request: User {} to transfer accounts to user {}", requestingUserId, transferRequest.getTargetUserId());
+            if (transferRequest.getBackedUpAccountIds() == null || transferRequest.getBackedUpAccountIds().isEmpty()) {
+                log.warn("Transfer request from user {} is missing account IDs.", requestingUserId);
+                return Mono.just(ResponseEntity.badRequest().body(Flux.error(new IllegalArgumentException("BackedUpAccountIds list cannot be empty."))));
+            }
+            if (!StringUtils.hasText(transferRequest.getTargetUserId())) {
+                log.warn("Transfer request from user {} is missing targetUserId.", requestingUserId);
+                return Mono.just(ResponseEntity.badRequest().body(Flux.error(new IllegalArgumentException("TargetUserId cannot be empty."))));
+            }
+
+            Flux<BackedUpAccount> transferredAccounts = deviceService.transferBackedUpAccounts(
+                transferRequest.getBackedUpAccountIds(),
+                transferRequest.getTargetUserId(),
+                requestingUserId
+            );
+
+            // Handling potential errors from the service layer within the response
+            return Mono.just(ResponseEntity.ok()
+                .body(transferredAccounts
+                    .onErrorResume(IllegalArgumentException.class, e -> {
+                        log.warn("Transfer failed due to invalid argument for user {}: {}", requestingUserId, e.getMessage());
+                        // It's tricky to return specific HTTP status codes for individual items in a Flux here.
+                        // The overall operation is OK, but individual items might have failed.
+                        // Consider a more complex response DTO if granular error reporting per account is needed.
+                        return Flux.error(e); // Propagate error to be handled by global error handlers or client
+                    })
+                    .onErrorResume(SecurityException.class, e -> {
+                        log.warn("Transfer failed due to security exception for user {}: {}", requestingUserId, e.getMessage());
+                        return Flux.error(e); // Propagate error
+                    })
+                    .onErrorResume(RuntimeException.class, e -> {
+                        // Catch other runtime exceptions like account not found
+                        log.error("Transfer failed due to runtime exception for user {}: {}", requestingUserId, e.getMessage());
+                        return Flux.error(e);
+                    })
+                )
+            );
+        });
     }
 }
