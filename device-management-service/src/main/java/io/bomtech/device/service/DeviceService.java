@@ -163,6 +163,22 @@ public class DeviceService {
         return backedUpAccountRepository.findByUserId(userId);
     }
 
+    public Mono<BackedUpAccount> getBackedUpAccountById(String backedUpAccountId, String requestingUserId) {
+        log.debug("Fetching backed up account with id: {} for user: {}", backedUpAccountId, requestingUserId);
+        return backedUpAccountRepository.findById(backedUpAccountId)
+                .flatMap(account -> {
+                    if (!account.getUserId().equals(requestingUserId)) {
+                        log.warn("User {} attempted to access unauthorized backed up account {}", requestingUserId, backedUpAccountId);
+                        return Mono.error(new SecurityException("Access denied to this backed up account."));
+                    }
+                    return Mono.just(account);
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("BackedUpAccount with id {} not found", backedUpAccountId);
+                    return Mono.empty(); // Or Mono.error(new NotFoundException(...))
+                }));
+    }
+
     // Method to handle backup status updates from devices
     public Mono<Device> updateBackupStatus(String deviceId, String zaloAccountId, String zaloPhoneNumber, String status, String message) {
          log.info("Updating backup status for device {}: Account={}, Status={}, Message='{}'",

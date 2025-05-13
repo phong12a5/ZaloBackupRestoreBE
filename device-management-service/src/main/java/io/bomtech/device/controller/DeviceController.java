@@ -180,6 +180,25 @@ public class DeviceController {
          // Error handled by @ExceptionHandler
     }
 
+    // --- Endpoint to Get a Specific Backup Account by ID ---
+    @GetMapping("/backups/{backedUpAccountId}")
+    public Mono<ResponseEntity<BackedUpAccount>> getBackedUpAccountById(
+            @PathVariable String backedUpAccountId,
+            @RequestHeader(USER_ID_HEADER) String userIdHeader) {
+
+        return getUserIdFromHeader(userIdHeader).flatMap(userId -> {
+            log.info("API request: Get backed up account by ID {} for user {}", backedUpAccountId, userId);
+            return deviceService.getBackedUpAccountById(backedUpAccountId, userId)
+                    .map(ResponseEntity::ok)
+                    .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
+                    .onErrorResume(SecurityException.class, e ->
+                        Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).build())
+                    );
+        }).onErrorResume(ResponseStatusException.class, e ->
+            Mono.just(ResponseEntity.status(e.getStatusCode()).build())
+        );
+    }
+
     // --- Endpoint to Download a Specific Backup File ---
     @GetMapping("/backups/download/{backedUpAccountId}")
     public Mono<ResponseEntity<Resource>> downloadBackupFile(
