@@ -26,7 +26,7 @@ const isSidebarVisible = ref(true);
 
 <style scoped>
 .left-sidebar {
-  width: 220px; /* Slightly wider like Vultr */
+  width: 180px; /* Slightly wider like Vultr */
   background-color: #2a5b8d; /* Vultr sidebar dark blue/gray */
   color: #fff;
   padding: 1rem 0; /* More vertical padding, less horizontal */

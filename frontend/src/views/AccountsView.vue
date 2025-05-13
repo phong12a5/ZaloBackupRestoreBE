@@ -2,6 +2,14 @@
   <div class="accounts-view">
     <h2>Backed Up Accounts</h2>
 
+    <!-- Search and Actions Bar -->
+    <div class="actions-bar">
+      <input type="text" v-model="searchQuery" placeholder="Search by phone, name, device..." class="search-input">
+      <button class="action-button main-action-button" @click="handleSelectedAction" :disabled="selectedAccountIds.length === 0">
+        Action on Selected ({{ selectedAccountIds.length }})
+      </button>
+    </div>
+
     <div v-if="isLoading" class="loading-message">Loading accounts...</div>
     <div v-if="error" class="error-message">Error loading accounts: {{ error }}</div>
 
@@ -9,18 +17,22 @@
       No backed up accounts found. Start a backup from the Devices page.
     </div>
 
-    <table v-if="!isLoading && accounts.length > 0" class="accounts-table">
+    <table v-if="!isLoading && filteredAccounts.length > 0" class="accounts-table">
       <thead>
         <tr>
+          <th><input type="checkbox" @change="toggleSelectAll" :checked="allSelected" /></th>
           <th>Phone Number</th>
+          <th>Account Name</th>
           <th>Backed Up From Device</th>
           <th>Backup Date</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="account in accounts" :key="account.id">
+        <tr v-for="account in filteredAccounts" :key="account.id">
+          <td><input type="checkbox" :value="account.id" v-model="selectedAccountIds"></td>
           <td>{{ account.zaloPhoneNumber || 'N/A' }}</td>
+          <td>{{ account.zaloAccountName || 'N/A' }}</td>
           <td>{{ getDeviceName(account.deviceId) }}</td>
           <td>{{ formatTimestamp(account.backupTimestamp) }}</td>
           <td>
@@ -35,13 +47,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { getMyBackedUpAccounts, getMyDevices } from '@/api/deviceApi'; // Also need devices for names
+import { getMyBackedUpAccounts, getMyDevices } from '@/api/deviceApi';
 import type { BackedUpAccount, Device } from '@/types';
 
 const accounts = ref<BackedUpAccount[]>([]);
-const devices = ref<Device[]>([]); // Store devices to map IDs to names
+const devices = ref<Device[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const searchQuery = ref('');
+const selectedAccountIds = ref<string[]>([]);
 
 const fetchAccountsAndDevices = async () => {
   isLoading.value = true;
@@ -62,6 +76,37 @@ const fetchAccountsAndDevices = async () => {
   }
 };
 
+// Filtered accounts based on search query
+const filteredAccounts = computed(() => {
+  if (!searchQuery.value) {
+    return accounts.value;
+  }
+  const lowerSearchQuery = searchQuery.value.toLowerCase();
+  return accounts.value.filter(account => {
+    return (
+      account.zaloPhoneNumber?.toLowerCase().includes(lowerSearchQuery) ||
+      account.zaloAccountName?.toLowerCase().includes(lowerSearchQuery) ||
+      getDeviceName(account.deviceId).toLowerCase().includes(lowerSearchQuery) ||
+      account.zaloAccountId?.toLowerCase().includes(lowerSearchQuery)
+    );
+  });
+});
+
+// Computed property for "Select All" checkbox state
+const allSelected = computed(() => {
+  return filteredAccounts.value.length > 0 && selectedAccountIds.value.length === filteredAccounts.value.length;
+});
+
+// Toggle select all accounts
+const toggleSelectAll = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  if (target.checked) {
+    selectedAccountIds.value = filteredAccounts.value.map(acc => acc.id);
+  } else {
+    selectedAccountIds.value = [];
+  }
+};
+
 // Helper to get device name from ID
 const deviceNameMap = computed(() => {
   return devices.value.reduce((map, device) => {
@@ -71,7 +116,7 @@ const deviceNameMap = computed(() => {
 });
 
 const getDeviceName = (deviceId: string): string => {
-  return deviceNameMap.value[deviceId] || `Unknown (${deviceId.substring(0, 6)}...)`; // Return name or truncated ID
+  return deviceNameMap.value[deviceId] || `Unknown (${deviceId.substring(0, 6)}...)`;
 };
 
 const formatTimestamp = (timestamp?: string): string => {
@@ -87,6 +132,16 @@ const showRestoreInfo = (account: BackedUpAccount) => {
     alert(`Restore information for ${account.zaloPhoneNumber} (ID: ${account.zaloAccountId})\n\nName: ${account.zaloAccountName}\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
 };
 
+// Placeholder for action on selected accounts
+const handleSelectedAction = () => {
+  if (selectedAccountIds.value.length === 0) {
+    alert('Please select at least one account.');
+    return;
+  }
+  alert(`Action triggered for selected accounts: ${selectedAccountIds.value.join(', ')}`);
+  // Implement actual logic here, e.g., call an API
+};
+
 // Fetch data when the component mounts
 onMounted(fetchAccountsAndDevices);
 </script>
@@ -95,6 +150,31 @@ onMounted(fetchAccountsAndDevices);
 /* Reuse styles from DevicesView or create shared styles */
 .accounts-view {
   padding: 1.5rem 2rem;
+}
+
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  flex-grow: 1;
+  margin-right: 1rem;
+}
+
+.main-action-button {
+  background-color: #007bff; /* Blue for primary action */
+  color: white;
+}
+
+.main-action-button:hover:not(:disabled) {
+  background-color: #0056b3;
 }
 
 h1 {
@@ -128,6 +208,11 @@ th, td {
   border-bottom: 1px solid #e0e0e0;
   font-size: 0.9rem;
   vertical-align: middle;
+}
+
+th:first-child, td:first-child { /* Style for checkbox column */
+  width: 30px; /* Adjust as needed */
+  text-align: center;
 }
 
 th {
