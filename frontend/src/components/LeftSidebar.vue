@@ -27,7 +27,7 @@ const isSidebarVisible = ref(true);
 <style scoped>
 .left-sidebar {
   width: 220px; /* Slightly wider like Vultr */
-  background-color: #2c3e50; /* Vultr sidebar dark blue/gray */
+  background-color: #2a5b8d; /* Vultr sidebar dark blue/gray */
   color: #fff;
   padding: 1rem 0; /* More vertical padding, less horizontal */
   height: calc(100vh - 55px); /* Full height minus top navbar (updated height) */
@@ -63,6 +63,20 @@ li a:hover,
 li .router-link:hover {
   color: #fff;
   background-color: #34495e; /* Slightly lighter background on hover */
+}
+
+/* Style for the active router link */
+li .router-link-exact-active {
+  color: #fff; /* White text for active link */
+  background-color: #1abc9c; /* A distinct background color for active state */
+  /* Optional: Add a left border or other indicators */
+  /* border-left: 3px solid #f1c40f; */
+  /* font-weight: bold; */
+}
+
+/* Ensure hover on active link doesn't change background if it's already distinct */
+li .router-link-exact-active:hover {
+  background-color: #1abc9c; /* Keep the active background color on hover */
 }
 
 li a i,
