@@ -282,4 +282,32 @@ public class DeviceService {
         }
         return Mono.just(new FileSystemResource(path));
     }
+
+    // --- Method to Download Backup File ---
+    public Mono<Resource> downloadBackupFile(String backedUpAccountId, String requestingUserId) {
+        log.info("Attempting to download backup file for accountId: {} by userId: {}", backedUpAccountId, requestingUserId);
+        return backedUpAccountRepository.findById(backedUpAccountId)
+                .flatMap(backedUpAccount -> {
+                    // Verify if the requesting user is the owner of the backup
+                    if (!backedUpAccount.getUserId().equals(requestingUserId)) {
+                        log.warn("Access denied for userId {} attempting to download backup for accountId {}", requestingUserId, backedUpAccountId);
+                        return Mono.error(new SecurityException("Access denied to this backup file."));
+                    }
+
+                    Path backupPath = Paths.get(backedUpAccount.getBackupFilePath());
+                    log.debug("Backup file path for accountId {}: {}", backedUpAccountId, backupPath);
+
+                    if (!Files.exists(backupPath) || !Files.isReadable(backupPath)) {
+                        log.error("Backup file not found or not readable at path: {}", backupPath);
+                        return Mono.error(new IOException("Backup file not found or not readable: " + backupPath));
+                    }
+                    Resource resource = new FileSystemResource(backupPath);
+                    return Mono.just(resource);
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("No BackedUpAccount found with id: {}", backedUpAccountId);
+                    return Mono.error(new IOException("Backup record not found for id: " + backedUpAccountId)); // Or a custom NotFoundException
+                }))
+                .doOnError(e -> log.error("Error during backup file download for accountId {}: {}", backedUpAccountId, e.getMessage()));
+    }
 }

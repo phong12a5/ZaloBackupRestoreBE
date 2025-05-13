@@ -19,6 +19,13 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.server.ResponseStatusException; // Import for explicit error handling
+// Remove Spring Security imports if no longer used directly for JWT principal
+// import org.springframework.security.core.annotation.AuthenticationPrincipal;
+// import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/devices")
@@ -171,5 +178,51 @@ public class DeviceController {
              return ResponseEntity.ok(deviceService.getBackedUpAccountsByUserId(userId));
          });
          // Error handled by @ExceptionHandler
+    }
+
+    // --- Endpoint to Download a Specific Backup File ---
+    @GetMapping("/backups/download/{backedUpAccountId}")
+    public Mono<ResponseEntity<Resource>> downloadBackupFile(
+            @PathVariable String backedUpAccountId,
+            @RequestHeader(USER_ID_HEADER) String userIdHeader) { // Get userId from header
+
+        return getUserIdFromHeader(userIdHeader).flatMap(userId -> {
+            log.info("Received request to download backup file with ID: {} for user: {}", backedUpAccountId, userId);
+
+            return deviceService.downloadBackupFile(backedUpAccountId, userId)
+                    .flatMap(resource -> {
+                        try {
+                            Path filePath = Paths.get(resource.getURI()); // Get path to extract filename
+                            String filename = filePath.getFileName().toString();
+
+                            HttpHeaders headers = new HttpHeaders();
+                            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                            headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+                            headers.add(HttpHeaders.PRAGMA, "no-cache");
+                            headers.add(HttpHeaders.EXPIRES, "0");
+
+                            return Mono.just(ResponseEntity.ok()
+                                    .headers(headers)
+                                    .contentType(MediaType.APPLICATION_OCTET_STREAM) // General binary type
+                                    .contentLength(resource.contentLength())
+                                    .body(resource));
+                        } catch (IOException e) {
+                            log.error("Error accessing file resource for backup ID {}: {}", backedUpAccountId, e.getMessage());
+                            return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<Resource>body(null)); // Ensure type
+                        }
+                    })
+                    .onErrorResume(SecurityException.class, e -> {
+                        log.warn("SecurityException for backup download {}: {}", backedUpAccountId, e.getMessage());
+                        return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).<Resource>body(null)); // Ensure type
+                    })
+                    .onErrorResume(IOException.class, e -> {
+                        log.error("IOException for backup download {}: {}", backedUpAccountId, e.getMessage());
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).<Resource>body(null)); // Ensure type
+                    })
+                    .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).<Resource>body(null))); // Ensure type
+        }).onErrorResume(ResponseStatusException.class, e ->
+            // Handle cases where getUserIdFromHeader fails (e.g., missing header)
+            Mono.just(ResponseEntity.status(e.getStatusCode()).<Resource>body(null)) // Ensure type
+        );
     }
 }
