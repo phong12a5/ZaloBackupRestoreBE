@@ -60,7 +60,7 @@
           <input type="text" id="targetUserId" v-model="targetUserIdInput" placeholder="Enter target User ID" class="modal-input">
           <ul v-if="showSuggestions" class="suggestions-list">
             <li v-for="user in userSuggestions" :key="user.id" @click="selectUserSuggestion(user)">
-              <strong>{{ user.username }}</strong> - {{ user.fullName || 'No Name' }}
+              <strong>{{ user.username }}</strong> - {{ user.fullname || 'No Name' }}
             </li>
           </ul>
         </div>
@@ -301,7 +301,7 @@ watch(targetUserIdInput, (newQuery) => {
     userSuggestions.value = allUsers.value.filter(user =>
       user.id.toLowerCase().includes(queryLower) ||
       user.username.toLowerCase().includes(queryLower) ||
-      (user.fullName && user.fullName.toLowerCase().includes(queryLower))
+      (user.fullname && user.fullname.toLowerCase().includes(queryLower))
     );
     showSuggestions.value = userSuggestions.value.length > 0;
   } else {
@@ -311,7 +311,7 @@ watch(targetUserIdInput, (newQuery) => {
 });
 
 const selectUserSuggestion = (user: UserSafeDto) => {
-  targetUserIdInput.value = user.id; // Or user.username, depending on what the backend expects
+  targetUserIdInput.value = user.username;
   userSuggestions.value = [];
   showSuggestions.value = false;
 };
@@ -349,7 +349,8 @@ onMounted(fetchInitialData); // Changed to fetchInitialData
   font-size: 0.9rem;
   flex-grow: 1;
   margin-right: 1rem;
-  min-height: 20px; /* Adjust as needed */
+  min-height: 20px; /* Adjust as needed -> Reduced from a potentially larger or default value */
+  height: 40px; /* Explicitly set height, adjust as needed */
   resize: vertical; /* Allow vertical resize */
   font-family: inherit; /* Ensure consistent font */
 }

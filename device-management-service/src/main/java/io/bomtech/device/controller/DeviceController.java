@@ -11,8 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,7 +33,9 @@ import java.nio.file.Paths;
 public class DeviceController {
 
     private final DeviceService deviceService;
+
     private static final String USER_ID_HEADER = "X-User-Name"; // Use the correct header name
+    private static final String USER_ROLE_HEADER = "X-User-Role"; // Use the correct header name
 
     // Helper to get userId from header or return error Mono
     private Mono<String> getUserIdFromHeader(String userIdHeader) {
@@ -250,8 +250,13 @@ public class DeviceController {
 
     @PostMapping("/backups/transfer")
     public Mono<ResponseEntity<Flux<BackedUpAccount>>> transferAccounts(
+            @RequestHeader(USER_ROLE_HEADER) String role,
             @RequestHeader(USER_ID_HEADER) String userIdHeader,
             @RequestBody TransferAccountsRequest transferRequest) {
+
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Flux.error(new SecurityException("Unauthorized: Insufficient permissions."))));
+        }
 
         return getUserIdFromHeader(userIdHeader).flatMap(requestingUserId -> {
             log.info("API request: User {} to transfer accounts to user {}", requestingUserId, transferRequest.getTargetUserId());

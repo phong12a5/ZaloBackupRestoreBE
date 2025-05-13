@@ -31,6 +31,6 @@ export interface BackedUpAccount {
 export interface UserSafeDto {
   id: string;
   username: string;
-  fullName?: string; // Optional, adjust if your DTO has it
+  fullname?: string; // Optional, adjust if your DTO has it
   role: string;
 }

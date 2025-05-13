@@ -5,6 +5,7 @@ public class UserSafeDto {
     private String username;
     private String email;
     private String fullname;
+    private String role;
 
     public UserSafeDto(String id, String username) {
         this.id = id;
@@ -16,6 +17,7 @@ public class UserSafeDto {
         this.username = user.getUsername();
         this.email = user.getEmail();
         this.fullname = user.getFullname();
+        this.role = user.getRole();
     }
 
     public String getId() {
@@ -48,5 +50,13 @@ public class UserSafeDto {
 
     public void setFullname(String fullname) {
         this.fullname = fullname;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }
