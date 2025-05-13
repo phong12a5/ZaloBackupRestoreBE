@@ -143,10 +143,12 @@ public class DeviceController {
         });
     }
 
-    @GetMapping("/apk")
-    public Mono<ResponseEntity<Resource>> downloadApk() {
+    @GetMapping("/apk/{apkType}")
+    public Mono<ResponseEntity<Resource>> downloadApk(
+        @PathVariable String apkType
+    ) {
         log.info("API request: Download APK file");
-        return deviceService.getApkResource()
+        return deviceService.getApkResource(apkType)
                 .map(resource -> {
                     HttpHeaders headers = new HttpHeaders();
                     // Suggest a filename for the download

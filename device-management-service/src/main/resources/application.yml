@@ -34,4 +34,5 @@ app:
 
 mobile:
   apk:
-    path: /app/apk/com.zing.zalo.xapks
+    zalo: /app/apk/com.zing.zalo.xapks
+    zalobr: /app/apk/pdt.goodfarmer.app.apk

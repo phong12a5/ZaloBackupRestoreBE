@@ -7,6 +7,7 @@
       <!-- Use router-link for navigation -->
       <li><router-link to="/devices"><i class="icon-server"></i> Devices</router-link></li>
       <li><router-link to="/accounts"><i class="icon-billing"></i> Accounts</router-link></li>
+      <li><router-link to="/download"><i class="icon-download"></i> Download</router-link></li>
       <!-- Removed API Docs link -->
     </ul>
   </aside>
@@ -74,6 +75,7 @@ li .router-link i {
 /* Placeholder icons */
 .icon-server::before { content: '💻'; }
 .icon-billing::before { content: '💳'; }
+.icon-download::before { content: '📥'; } /* Added download icon */
 .icon-support::before { content: '❓'; }
 .icon-account::before { content: '👤'; }
 .icon-api::before { content: '🔌'; }

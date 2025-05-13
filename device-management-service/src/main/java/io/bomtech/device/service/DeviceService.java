@@ -40,8 +40,11 @@ public class DeviceService {
     private String backupStoragePath;
 
     // Inject APK path from application.properties
-    @Value("${mobile.apk.path}")
-    private String apkFilePath;
+    @Value("${mobile.apk.zalo}")
+    private String zaloApkFilePath;
+
+    @Value("${mobile.apk.zalobr}")
+    private String zalobrApkFilePath;
 
     // --- Device Management ---
 
@@ -289,7 +292,18 @@ public class DeviceService {
     }
 
     // --- Method to get the APK file as a Resource ---
-    public Mono<Resource> getApkResource() {
+    public Mono<Resource> getApkResource(String apkType) {
+        log.info("Attempting to load APK resource of type: {}", apkType);
+        String apkFilePath;
+        if ("zalo".equalsIgnoreCase(apkType)) {
+            apkFilePath = zaloApkFilePath;
+        } else if ("zalobr".equalsIgnoreCase(apkType)) {
+            apkFilePath = zalobrApkFilePath;
+        } else {
+            log.error("Invalid APK type requested: {}", apkType);
+            return Mono.error(new IllegalArgumentException("Invalid APK type: " + apkType));
+        }
+        log.debug("APK file path: {}", apkFilePath);
         Path path = Paths.get(apkFilePath);
         log.info("Attempting to load APK from path: {}", path);
         if (!Files.exists(path) || !Files.isReadable(path)) {

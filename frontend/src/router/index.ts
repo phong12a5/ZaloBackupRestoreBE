@@ -4,6 +4,7 @@ import Register from '../components/Register.vue';
 import Home from '../components/Home.vue'; // Import the Home component
 import DevicesView from '../views/DevicesView.vue';
 import AccountsView from '../views/AccountsView.vue'; // Import AccountsView
+import DownloadView from '../views/DownloadView.vue'; // Import AccountsView
 
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/login' },
@@ -35,6 +36,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Accounts',
         component: AccountsView, // Use direct import or lazy load
         // component: () => import('../views/AccountsView.vue'), // Lazy load example
+        meta: { requiresAuth: true }
+      },
+      { // Add route for DownloadView
+        path: '/download',
+        name: 'Download',
+        component: DownloadView,
         meta: { requiresAuth: true }
       }
     ]
