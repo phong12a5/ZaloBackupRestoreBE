@@ -62,4 +62,15 @@ public class JwtUtil {
             throw new RuntimeException("Invalid JWT token");
         }
     }
+
+    // Add this method to extract role from token
+    @SuppressWarnings("deprecation")
+    public String getRoleFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser().setSigningKey(key).parseClaimsJws(token).getBody();
+            return (String) claims.get("role");
+        } catch (JwtException e) {
+            throw new RuntimeException("Invalid JWT token");
+        }
+    }
 }

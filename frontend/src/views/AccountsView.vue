@@ -58,6 +58,11 @@
         <div class="form-group">
           <label for="targetUserId">Target User ID:</label>
           <input type="text" id="targetUserId" v-model="targetUserIdInput" placeholder="Enter target User ID" class="modal-input">
+          <ul v-if="showSuggestions" class="suggestions-list">
+            <li v-for="user in userSuggestions" :key="user.id" @click="selectUserSuggestion(user)">
+              <strong>{{ user.username }}</strong> - {{ user.fullName || 'No Name' }}
+            </li>
+          </ul>
         </div>
         <div class="modal-actions">
           <button @click="confirmTransfer" class="modal-button confirm-button" :disabled="!targetUserIdInput.trim() || isTransferring">
@@ -75,10 +80,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue'; // Added watch
 import apiClient from '@/api/axios'; // Import apiClient
 import { getMyBackedUpAccounts, getMyDevices } from '@/api/deviceApi';
-import type { BackedUpAccount, Device } from '@/types'; // Added import
+import { getCurrentUser, getAllUsers } from '@/api/userApi'; // Added userApi imports
+import type { BackedUpAccount, Device, UserSafeDto } from '@/types'; // Added UserSafeDto
 
 const searchQuery = ref('');
 const selectedAccountIds = ref<string[]>([]);
@@ -95,18 +101,34 @@ const devices = ref<Device[]>([]);
 const error = ref<string | null>(null);
 const isLoading = ref(true);
 
-const fetchAccountsAndDevices = async () => {
+// User suggestion related reactive variables
+const currentUser = ref<UserSafeDto | null>(null);
+const allUsers = ref<UserSafeDto[]>([]);
+const userSuggestions = ref<UserSafeDto[]>([]);
+const showSuggestions = ref(false);
+
+const fetchInitialData = async () => {
   try {
     isLoading.value = true;
-    error.value = null; // Clear previous errors
-    const [fetchedAccounts, fetchedDevices] = await Promise.all([
+    error.value = null;
+    const [fetchedAccounts, fetchedDevices, fetchedCurrentUser] = await Promise.all([
       getMyBackedUpAccounts(),
-      getMyDevices()
+      getMyDevices(),
+      getCurrentUser() // Fetch current user
     ]);
-    accounts.value = fetchedAccounts; // Corrected: use fetchedAccounts directly
-    devices.value = fetchedDevices;   // Corrected: use fetchedDevices directly
+    accounts.value = fetchedAccounts;
+    devices.value = fetchedDevices;
+    currentUser.value = fetchedCurrentUser;
+
+    console.log('fetchedCurrentUser:', fetchedCurrentUser);
+    // If current user is ADMIN, fetch all users for suggestions
+    if (fetchedCurrentUser && fetchedCurrentUser.role === 'ADMIN') {
+      const fetchedAllUsers = await getAllUsers();
+      allUsers.value = fetchedAllUsers;
+    }
+
   } catch (err: any) {
-    console.error('Failed to fetch accounts or devices:', err);
+    console.error('Failed to fetch initial data:', err);
     error.value = err.response?.data?.message || err.message || 'An unknown error occurred';
   } finally {
     isLoading.value = false;
@@ -193,19 +215,23 @@ const openTransferModal = () => {
     alert('Please select at least one account to transfer.');
     return;
   }
-  transferError.value = null; // Clear previous errors
-  transferSuccessMessage.value = null; // Clear previous success messages
-  targetUserIdInput.value = ''; // Clear previous target user ID
+  transferError.value = null;
+  transferSuccessMessage.value = null;
+  targetUserIdInput.value = '';
+  userSuggestions.value = []; // Clear suggestions
+  showSuggestions.value = false; // Hide suggestions box
   isTransferring.value = false;
   showTransferModal.value = true;
 };
 
 const closeTransferModal = () => {
-  if (isTransferring.value) return; // Don't close if in the middle of an API call
+  if (isTransferring.value) return;
   showTransferModal.value = false;
   targetUserIdInput.value = '';
   transferError.value = null;
   transferSuccessMessage.value = null;
+  userSuggestions.value = [];
+  showSuggestions.value = false;
 };
 
 const confirmTransfer = async () => {
@@ -240,7 +266,7 @@ const confirmTransfer = async () => {
       // Only close and refresh if still in modal and no new error occurred during the timeout
       if (showTransferModal.value && !transferError.value) {
         closeTransferModal();
-        fetchAccountsAndDevices(); // Refresh the accounts list
+        fetchInitialData(); // Changed to fetchInitialData
       }
     }, 3000); // Keep modal open for 3 seconds to show success
 
@@ -268,8 +294,30 @@ const confirmTransfer = async () => {
   }
 };
 
+// Watch for changes in targetUserIdInput to filter suggestions
+watch(targetUserIdInput, (newQuery) => {
+  if (currentUser.value?.role === 'ADMIN' && newQuery.trim().length > 0) {
+    const queryLower = newQuery.toLowerCase();
+    userSuggestions.value = allUsers.value.filter(user =>
+      user.id.toLowerCase().includes(queryLower) ||
+      user.username.toLowerCase().includes(queryLower) ||
+      (user.fullName && user.fullName.toLowerCase().includes(queryLower))
+    );
+    showSuggestions.value = userSuggestions.value.length > 0;
+  } else {
+    userSuggestions.value = [];
+    showSuggestions.value = false;
+  }
+});
+
+const selectUserSuggestion = (user: UserSafeDto) => {
+  targetUserIdInput.value = user.id; // Or user.username, depending on what the backend expects
+  userSuggestions.value = [];
+  showSuggestions.value = false;
+};
+
 // Fetch data when the component mounts
-onMounted(fetchAccountsAndDevices);
+onMounted(fetchInitialData); // Changed to fetchInitialData
 </script>
 
 <style scoped>
@@ -439,13 +487,7 @@ tbody tr:hover {
 
 .form-group {
   margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
-  color: #444;
+  position: relative; /* Added for suggestion box positioning */
 }
 
 .modal-input {
@@ -455,6 +497,35 @@ tbody tr:hover {
   border-radius: 4px;
   font-size: 1rem;
   box-sizing: border-box;
+}
+
+.suggestions-list {
+  position: absolute;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  max-height: 150px;
+  overflow-y: auto;
+  width: calc(100% - 2px); /* Adjust width to match input, considering border */
+  z-index: 1002; /* Ensure suggestions are above other modal content but below modal overlay */
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.suggestions-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.suggestions-list li:hover {
+  background-color: #f0f0f0;
+}
+
+.suggestions-list li strong {
+  font-weight: bold;
 }
 
 .modal-actions {

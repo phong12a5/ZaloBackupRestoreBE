@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -31,5 +33,14 @@ public class UserController {
                 return ResponseEntity.ok(new UserSafeDto(user));
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllUsers(@RequestHeader("X-User-Role") String role) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body("Access denied");
+        }
+        List<UserSafeDto> users = userService.getAllUsersSafe();
+        return ResponseEntity.ok(users);
     }
 }

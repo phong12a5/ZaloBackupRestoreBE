@@ -5,6 +5,10 @@ import io.bomtech.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import io.bomtech.user.model.UserSafeDto; // Add this import
+import java.util.List; // Add this import
+import java.util.stream.Collectors; // Add this import
+
 import java.util.Optional;
 
 @Service
@@ -21,7 +25,13 @@ public class UserService {
     }
 
     public User createUser(User user) {
-        // Add any validation or business logic here if needed
         return userRepository.save(user);
+    }
+
+    public List<UserSafeDto> getAllUsersSafe() {
+        return userRepository.findAll()
+                .stream()
+                .map(UserSafeDto::new)
+                .collect(Collectors.toList());
     }
 }

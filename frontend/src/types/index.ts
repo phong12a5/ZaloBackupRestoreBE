@@ -26,3 +26,11 @@ export interface BackedUpAccount {
 
 // You might also want types for User, Auth responses etc.
 // export interface User { ... }
+
+// Based on user-service/src/main/java/io/bomtech/user/model/UserSafeDto.java
+export interface UserSafeDto {
+  id: string;
+  username: string;
+  fullName?: string; // Optional, adjust if your DTO has it
+  role: string;
+}

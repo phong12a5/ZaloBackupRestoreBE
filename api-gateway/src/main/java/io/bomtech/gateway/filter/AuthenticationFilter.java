@@ -65,8 +65,10 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         // Optional: Add username or claims to request headers for downstream services
         String username = jwtUtil.getUsernameFromToken(jwt);
+        String role = jwtUtil.getRoleFromToken(jwt); // Extract role
         ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                .header("X-User-Name", username)
+               .header("X-User-Role", role) // Add role to header
                .build();
         ServerWebExchange modifiedExchange = exchange.mutate().request(modifiedRequest).build();
         return chain.filter(modifiedExchange);

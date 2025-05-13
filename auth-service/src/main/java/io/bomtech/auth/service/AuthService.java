@@ -51,6 +51,7 @@ public class AuthService {
         userServiceData.put("username", savedUser.getUsername());
         userServiceData.put("email", savedUser.getEmail());
         userServiceData.put("fullname", registerRequest.getFullname());
+        userServiceData.put("role", savedUser.getRole());
 
         webClientBuilder.build()
                 .post()
