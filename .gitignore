@@ -1,3 +1,4 @@
 .vscode
 mongo-data/
 target/
+**/.env*
