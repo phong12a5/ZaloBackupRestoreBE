@@ -18,9 +18,10 @@ public class CorsConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(Collections.singletonList("http://localhost"));
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(Collections.singletonList("*"));
+        // Allow both localhost (for development) and your domain
+        corsConfig.setAllowedOriginPatterns(Arrays.asList("http://localhost", "https://zalo.ink"));
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // Added PATCH
+        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-User-Name", "X-User-Role")); // Specify allowed headers
         corsConfig.setAllowCredentials(true);
         corsConfig.setMaxAge(3600L);
 
