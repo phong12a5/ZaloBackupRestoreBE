@@ -4,7 +4,7 @@
 
     <section class="download-section">
       <h3>Android Application (APK)</h3>
-      <button @click="downloadApk" class="download-button">Download Android APK</button>
+      <button @click="downloadApk" class="download-button">Download</button>
     </section>
 
     <hr class="section-divider">
@@ -74,10 +74,12 @@ export default defineComponent({
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  /* Added for horizontal centering */
   margin-left: auto;
   margin-right: auto;
-  max-width: 700px; /* Adjust as needed, ensures the section is not full-width if parent is wider */
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .download-section h2 {
