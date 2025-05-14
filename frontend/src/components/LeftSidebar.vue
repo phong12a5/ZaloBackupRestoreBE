@@ -10,6 +10,9 @@
       <li><router-link to="/download"><i class="icon-download"></i> Download</router-link></li>
       <!-- Removed API Docs link -->
     </ul>
+    <div class="sidebar-footer">
+      <p>&copy; {{ new Date().getFullYear() }} ZaloBackupRestore. All rights reserved.</p>
+    </div>
   </aside>
 </template>
 
@@ -29,11 +32,14 @@ const isSidebarVisible = ref(true);
   width: 180px; /* Slightly wider like Vultr */
   background-color: #2a5b8d; /* Vultr sidebar dark blue/gray */
   color: #fff;
-  padding: 1rem 0; /* More vertical padding, less horizontal */
+  /* padding: 1rem 0; */ /* Adjusted to allow footer to stick to bottom */
   height: calc(100vh - 55px); /* Full height minus top navbar (updated height) */
   overflow-y: auto;
   transition: transform 0.3s ease, width 0.3s ease; /* Smooth transition for hiding */
   flex-shrink: 0; /* Prevent sidebar from shrinking */
+  display: flex; /* Added for footer positioning */
+  flex-direction: column; /* Added for footer positioning */
+  padding-top: 1rem; /* Add padding back to top only */
 }
 
 .sidebar-header {
@@ -45,6 +51,7 @@ ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1; /* Allow ul to take available space, pushing footer down */
 }
 
 li a, /* Keep styling for 'a' if any exist elsewhere, or remove if only router-links are used */
@@ -93,6 +100,19 @@ li .router-link i {
 .icon-support::before { content: '❓'; }
 .icon-account::before { content: '👤'; }
 .icon-api::before { content: '🔌'; }
+
+.sidebar-footer {
+  padding: 1rem 1.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #bdc3c7; /* Lighter gray text, same as menu items */
+  margin-top: auto; /* Pushes footer to the bottom if sidebar content is short */
+  border-top: 1px solid #34495e; /* Optional separator line */
+}
+
+.sidebar-footer p {
+  margin: 0;
+}
 
 /* Responsive: Hide sidebar */
 @media (max-width: 768px) {

@@ -43,7 +43,7 @@
           <td>
             <button
               @click="triggerBackup(device.id)"
-              :disabled="!device.online || backupInProgress[device.id]"
+              :disabled="!device.online || backupInProgress[device.id] || !device.activeAccountPhone"
               class="action-button backup-button"
             >
               {{ backupInProgress[device.id] ? 'Backing up...' : 'Start Backup' }}

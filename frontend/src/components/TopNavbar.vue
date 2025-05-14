@@ -1,6 +1,7 @@
 <template>
   <nav class="top-navbar" @click="closeDropdown">
     <div class="navbar-brand">
+      <img src="/zalo-malware.svg" alt="Brand Logo" class="brand-logo" />
       <span class="brand-text">ZaloBR</span>
     </div>
     <div class="navbar-menu">
@@ -83,9 +84,16 @@ onMounted(() => {
 }
 
 .navbar-brand {
+  display: flex; /* Added to align logo and text */
+  align-items: center; /* Added to align logo and text */
   font-weight: bold;
   font-size: 1.1rem;
   color: #fff;
+}
+
+.brand-logo {
+  height: 30px; /* Adjust as needed */
+  margin-right: 0.5rem; /* Space between logo and text */
 }
 
 .navbar-menu {
