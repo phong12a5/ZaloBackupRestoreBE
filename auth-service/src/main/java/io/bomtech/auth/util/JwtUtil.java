@@ -23,7 +23,7 @@ public class JwtUtil {
     @Autowired // Add this annotation to inject UserRepository
     private UserRepository userRepository; // Add this field
 
-    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 15; // 15 minutes
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 30; // 30 minutes
     private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
 
     // Change Key initialization to happen after injection
