@@ -1,8 +1,12 @@
 import axios from 'axios';
 import router from '../router'; // Import router to redirect on refresh failure
 
+// Use environment variables for baseURL and refresh URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const AUTH_REFRESH_URL = import.meta.env.VITE_AUTH_REFRESH_URL || '/auth/refresh';
+
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8080', // Your API Gateway base URL
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -74,7 +78,7 @@ apiClient.interceptors.response.use(
 
       try {
         // Assume /auth/refresh endpoint exists on the backend
-        const refreshResponse = await axios.post('http://localhost:8080/auth/refresh', { refreshToken });
+        const refreshResponse = await axios.post(`${API_BASE_URL}${AUTH_REFRESH_URL}`, { refreshToken });
         const newAccessToken = refreshResponse.data.accessToken;
         // const newRefreshToken = refreshResponse.data.refreshToken; // If backend sends a new one
 

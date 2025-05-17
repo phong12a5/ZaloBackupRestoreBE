@@ -43,7 +43,7 @@
           <td>
             <button
               @click="triggerBackup(device.id)"
-              :disabled="!device.online || backupInProgress[device.id]"
+              :disabled="!device.online || backupInProgress[device.id] || !device.activeAccountPhone"
               class="action-button backup-button"
             >
               {{ backupInProgress[device.id] ? 'Backing up...' : 'Start Backup' }}
@@ -76,13 +76,10 @@ const getWebSocketURL = (): string | null => {
     error.value = 'Authentication token missing. Cannot connect for real-time updates.';
     return null;
   }
-  // Construct URL based on current window location, targeting the API Gateway port (8080)
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // Use API Gateway's host and port. Assuming gateway runs on the same host as frontend serves from, but port 8080.
-  // Adjust hostname/port if gateway is elsewhere.
-  const host = window.location.hostname;
-  const gatewayPort = 8080; // As defined in api-gateway application.yml
-  const url = `${protocol}//${host}:${gatewayPort}/ws/web/updates?token=${encodeURIComponent(token)}`;
+  const host = window.location.hostname; // This will be zalo.ink
+  // Construct URL without explicit port for wss/ws, as Nginx handles routing via standard ports (443/80)
+  const url = `${protocol}//${host}/ws/web/updates?token=${encodeURIComponent(token)}`;
   console.log('WebSocket URL:', url); // Log the constructed URL for debugging
   return url;
 };

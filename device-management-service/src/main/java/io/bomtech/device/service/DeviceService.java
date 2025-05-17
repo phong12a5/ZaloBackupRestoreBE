@@ -44,6 +44,9 @@ public class DeviceService {
     @Value("${mobile.apk.zalo}")
     private String zaloApkFilePath;
 
+    @Value("${mobile.apk.patched_zalo}")
+    private String patchedZaloApkFilePath;
+
     @Value("${mobile.apk.zalobr}")
     private String zalobrApkFilePath;
 
@@ -298,6 +301,8 @@ public class DeviceService {
         String apkFilePath;
         if ("zalo".equalsIgnoreCase(apkType)) {
             apkFilePath = zaloApkFilePath;
+        } else if ("patched_zalo".equalsIgnoreCase(apkType)) {
+            apkFilePath = patchedZaloApkFilePath;
         } else if ("zalobr".equalsIgnoreCase(apkType)) {
             apkFilePath = zalobrApkFilePath;
         } else {

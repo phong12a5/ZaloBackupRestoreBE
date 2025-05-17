@@ -34,5 +34,6 @@ app:
 
 mobile:
   apk:
-    zalo: /app/apk/com.zing.zalo.xapks
+    zalo: /app/apk/com.zing.zalo_25.04.01.xapk
+    patched_zalo: /app/apk/com.zing.zalo_patched.xapk
     zalobr: /app/apk/pdt.goodfarmer.app.apk
