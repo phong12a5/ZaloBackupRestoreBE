@@ -347,6 +347,49 @@ public class DeviceService {
                 .doOnError(e -> log.error("Error during backup file download for accountId {}: {}", backedUpAccountId, e.getMessage()));
     }
 
+    // --- Method to Delete a BackedUpAccount ---
+    public Mono<Void> deleteBackedUpAccount(String backedUpAccountId, String requestingUserId) {
+        log.info("User {} attempting to delete backed up account with ID: {}", requestingUserId, backedUpAccountId);
+        return backedUpAccountRepository.findById(backedUpAccountId)
+            .flatMap(account -> {
+                if (!account.getUserId().equals(requestingUserId)) {
+                    log.warn("User {} attempted to delete account {} owned by {}. Denying request.",
+                            requestingUserId, backedUpAccountId, account.getUserId());
+                    return Mono.error(new SecurityException("User does not have permission to delete this account backup."));
+                }
+
+                // Attempt to delete the physical backup file first
+                Path backupFilePath = Paths.get(account.getBackupFilePath());
+                Mono<Void> deleteFileMono;
+                if (Files.exists(backupFilePath)) {
+                    try {
+                        Files.delete(backupFilePath);
+                        log.info("Successfully deleted backup file: {} for accountId: {}", backupFilePath, backedUpAccountId);
+                        deleteFileMono = Mono.empty();
+                    } catch (IOException e) {
+                        log.error("Failed to delete backup file {} for accountId: {}. Error: {}", backupFilePath, backedUpAccountId, e.getMessage());
+                        // Decide if this should be a critical error or just a warning. 
+                        // For now, we'll log and continue to delete the DB record.
+                        deleteFileMono = Mono.empty(); // Or Mono.error(e) if file deletion failure should stop the process
+                    }
+                } else {
+                    log.warn("Backup file not found at path: {} for accountId: {}. Skipping file deletion.", backupFilePath, backedUpAccountId);
+                    deleteFileMono = Mono.empty();
+                }
+
+                return deleteFileMono.then(backedUpAccountRepository.delete(account))
+                    .doOnSuccess(v -> log.info("Successfully deleted backed up account record with ID: {}", backedUpAccountId))
+                    .doOnError(e -> log.error("Failed to delete backed up account record with ID: {}. Error: {}", backedUpAccountId, e.getMessage()));
+            })
+            .switchIfEmpty(Mono.defer(() -> {
+                log.warn("BackedUpAccount with ID: {} not found for deletion attempt by user: {}", backedUpAccountId, requestingUserId);
+                // Return an error or complete normally if not finding it is acceptable.
+                // For a delete operation, not finding it could be considered a success or a client error (e.g., 404).
+                // Here, we'll treat it as if the resource is already gone, so complete normally.
+                return Mono.empty(); 
+            }));
+    }
+
     public Flux<BackedUpAccount> transferBackedUpAccounts(List<String> backedUpAccountIds, String targetUserId, String requestingUserId) {
         log.info("User {} attempting to transfer {} accounts to user {}", requestingUserId, backedUpAccountIds.size(), targetUserId);
         if (requestingUserId.equals(targetUserId)) {
