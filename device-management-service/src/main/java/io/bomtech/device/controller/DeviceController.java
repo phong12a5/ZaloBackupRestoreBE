@@ -5,6 +5,7 @@ import io.bomtech.device.dto.TransferAccountsRequest;
 import io.bomtech.device.model.BackedUpAccount;
 import io.bomtech.device.model.Device;
 import io.bomtech.device.service.DeviceService;
+import io.bomtech.device.websocket.DeviceWebSocketHandler; // Import DeviceWebSocketHandler
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,7 @@ import java.nio.file.Paths;
 public class DeviceController {
 
     private final DeviceService deviceService;
+    private final DeviceWebSocketHandler deviceWebSocketHandler; // Add this field
 
     private static final String USER_ID_HEADER = "X-User-Name"; // Use the correct header name
     private static final String USER_ROLE_HEADER = "X-User-Role"; // Use the correct header name
@@ -292,7 +294,21 @@ public class DeviceController {
                 transferRequest.getBackedUpAccountIds(),
                 transferRequest.getTargetUserId(),
                 requestingUserId
-            );
+            ).doOnNext(backedUpAccount -> {
+                String deviceId = backedUpAccount.getDeviceId(); // Assuming BackedUpAccount has getDeviceId()
+                if (deviceId != null) {
+                    // Define the command as a JSON string
+                    String command = "{\"command\": \"refresh_account\"}";
+                    log.info("Attempting to send refresh_account command to device {} for transferred account {}", deviceId, backedUpAccount.getId());
+                    // Send command and subscribe to trigger it. Log errors if any.
+                    deviceWebSocketHandler.sendCommandToDevice(deviceId, command)
+                        .doOnSuccess(v -> log.info("Successfully sent REFRESH_ACCOUNTS command to device {} for account {}", deviceId, backedUpAccount.getId()))
+                        .doOnError(e -> log.warn("Failed to send REFRESH_ACCOUNTS command to device {} for account {}: {}. Device might be offline or command failed.", deviceId, backedUpAccount.getId(), e.getMessage()))
+                        .subscribe(); // Fire-and-forget, errors are logged by sendCommandToDevice and here
+                } else {
+                    log.warn("Cannot send REFRESH_ACCOUNTS command: deviceId is null for backedUpAccount {}", backedUpAccount.getId());
+                }
+            });
 
             // Handling potential errors from the service layer within the response
             return Mono.just(ResponseEntity.ok()
