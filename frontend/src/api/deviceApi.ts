@@ -23,3 +23,8 @@ export const getMyBackedUpAccounts = async (): Promise<BackedUpAccount[]> => {
   const response = await apiClient.get<BackedUpAccount[]>('/api/devices/user/me/accounts');
   return response.data;
 };
+
+// Xóa một tài khoản đã backup
+export const deleteBackedUpAccount = async (backedUpAccountId: string): Promise<void> => {
+  await apiClient.delete(`/api/devices/backups/${backedUpAccountId}`);
+};

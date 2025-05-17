@@ -9,7 +9,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "lib": ["es2015", "dom"] // Added "es2015" and "dom"
   },
   "include": [
     "src/**/*.ts",

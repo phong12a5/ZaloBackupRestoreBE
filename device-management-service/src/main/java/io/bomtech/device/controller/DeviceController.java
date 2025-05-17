@@ -248,6 +248,25 @@ public class DeviceController {
         );
     }
 
+    // --- Endpoint to Delete a Specific Backup Account by ID ---
+    @DeleteMapping("/backups/{backedUpAccountId}")
+    public Mono<ResponseEntity<Void>> deleteBackedUpAccount(
+            @PathVariable String backedUpAccountId,
+            @RequestHeader(USER_ID_HEADER) String userIdHeader) {
+        log.info("API request: Delete backed up account with ID: {} for user: {}", backedUpAccountId, userIdHeader);
+        return getUserIdFromHeader(userIdHeader)
+                .flatMap(userId -> deviceService.deleteBackedUpAccount(backedUpAccountId, userId)
+                        .then(Mono.just(ResponseEntity.ok().<Void>build()))
+                )
+                .onErrorResume(ResponseStatusException.class, e -> 
+                    Mono.just(ResponseEntity.status(e.getStatusCode()).build()) // Use getStatusCode()
+                )
+                .onErrorResume(Exception.class, e -> {
+                    log.error("Error deleting backed up account {}: {}", backedUpAccountId, e.getMessage());
+                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+                });
+    }
+
     @PostMapping("/backups/transfer")
     public Mono<ResponseEntity<Flux<BackedUpAccount>>> transferAccounts(
             @RequestHeader(USER_ROLE_HEADER) String role,

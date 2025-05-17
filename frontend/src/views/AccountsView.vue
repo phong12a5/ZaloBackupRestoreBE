@@ -32,7 +32,7 @@
           <th>Account Name</th>
           <th>Backed Up From Device</th>
           <th>Backup Date</th>
-          <th>Actions</th>
+          <th>Actions</th> <!-- Added Actions header -->
         </tr>
       </thead>
       <tbody>
@@ -43,8 +43,8 @@
           <td>{{ getDeviceName(account.deviceId) }}</td>
           <td>{{ formatTimestamp(account.backupTimestamp) }}</td>
           <td>
-            <button class="action-button restore-button" @click="showRestoreInfo(account)" title="Restore Info">Restore Info</button>
-            <!-- Add 'Delete Backup' later -->
+            <button @click="showRestoreInfo(account)" class="action-button restore-button">Restore Info</button>
+            <button @click="deleteAccount(account.id)" class="action-button delete-button">Delete</button> <!-- Added Delete button -->
           </td>
         </tr>
       </tbody>
@@ -111,6 +111,9 @@ const fetchInitialData = async () => {
   try {
     isLoading.value = true;
     error.value = null;
+    // Ensure accounts are refetched after a delete operation might have occurred elsewhere or to refresh state
+    selectedAccountIds.value = []; // Clear selection on refresh
+
     const [fetchedAccounts, fetchedDevices, fetchedCurrentUser] = await Promise.all([
       getMyBackedUpAccounts(),
       getMyDevices(),
@@ -120,7 +123,7 @@ const fetchInitialData = async () => {
     devices.value = fetchedDevices;
     currentUser.value = fetchedCurrentUser;
 
-    console.log('fetchedCurrentUser:', fetchedCurrentUser);
+    // console.log('fetchedCurrentUser:', fetchedCurrentUser);
     // If current user is ADMIN, fetch all users for suggestions
     if (fetchedCurrentUser && fetchedCurrentUser.role === 'ADMIN') {
       const fetchedAllUsers = await getAllUsers();
@@ -206,7 +209,30 @@ const formatTimestamp = (timestamp?: string): string => {
 };
 
 const showRestoreInfo = (account: BackedUpAccount) => {
-    alert(`Restore information for ${account.zaloPhoneNumber} (ID: ${account.zaloAccountId})\n\nName: ${account.zaloAccountName}\nDevice: ${getDeviceName(account.deviceId)}\nBackup Time: ${formatTimestamp(account.backupTimestamp)}`);
+    alert(`Restore information for ${account.zaloPhoneNumber} (ID: ${account.zaloAccountId})
+
+Name: ${account.zaloAccountName}
+Device: ${getDeviceName(account.deviceId)}
+Backup Time: ${formatTimestamp(account.backupTimestamp)}`);
+};
+
+// Placeholder for delete account logic
+const deleteAccount = async (accountId: string) => {
+  if (!confirm(`Are you sure you want to delete account backup ${accountId}? This action cannot be undone.`)) {
+    return;
+  }
+  console.log('Attempting to delete account:', accountId);
+  // TODO: Implement API call to delete the account
+  // try {
+  //   await deleteBackedUpAccount(accountId); // Assuming this function will be created in deviceApi.ts
+  //   accounts.value = accounts.value.filter(acc => acc.id !== accountId); // Optimistically update UI
+  //   selectedAccountIds.value = selectedAccountIds.value.filter(id => id !== accountId); // Remove from selection
+  //   alert('Account backup deleted successfully.');
+  // } catch (err: any) {
+  //   console.error('Failed to delete account:', err);
+  //   error.value = err.response?.data?.message || err.message || 'Failed to delete account backup.';
+  //   alert(`Error: ${error.value}`);
+  // }
 };
 
 // --- Transfer Modal Logic ---
@@ -449,6 +475,16 @@ tbody tr:hover {
 
 .transfer-button:hover:not(:disabled) {
   background-color: #e0a800;
+}
+
+.delete-button {
+  background-color: #dc3545; /* Red for delete */
+  color: white;
+  margin-left: 5px; /* Add some space next to the restore button */
+}
+
+.delete-button:hover:not(:disabled) {
+  background-color: #c82333; /* Darker red on hover */
 }
 
 /* Modal Styles */
