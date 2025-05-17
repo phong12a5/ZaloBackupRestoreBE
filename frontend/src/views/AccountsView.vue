@@ -223,7 +223,7 @@ const deleteAccount = async (accountId: string) => {
   }
   console.log('Attempting to delete account:', accountId);
   // TODO: Implement API call to delete the account
-   try {
+  try {
     await deleteBackedUpAccount(accountId); // Assuming this function will be created in deviceApi.ts
     accounts.value = accounts.value.filter(acc => acc.id !== accountId); // Optimistically update UI
     selectedAccountIds.value = selectedAccountIds.value.filter(id => id !== accountId); // Remove from selection
