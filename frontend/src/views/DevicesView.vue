@@ -61,6 +61,12 @@
         </tr>
       </tbody>
     </table>
+    <Notification
+      :message="notificationMessage"
+      :type="notificationType"
+      :show="showNotification"
+      @update:show="showNotification = $event"
+    />
   </div>
 </template>
 
@@ -68,6 +74,7 @@
 import { ref, onMounted, onUnmounted, reactive } from 'vue';
 import { getMyDevices, requestDeviceBackup, requestFriendsExport } from '@/api/deviceApi';
 import type { Device } from '@/types';
+import Notification from '@/components/Notification.vue'; // Import the Notification component
 
 const devices = ref<Device[]>([]);
 const isLoading = ref(true);
@@ -77,6 +84,19 @@ const backupInProgress = reactive<Record<string, boolean>>({});
 // Track export friends state per device
 const exportInProgress = reactive<Record<string, boolean>>({});
 const ws = ref<WebSocket | null>(null); // WebSocket instance
+
+// Notification state
+const showNotification = ref(false);
+const notificationMessage = ref('');
+const notificationType = ref<'success' | 'error' | 'info' | 'warning'>('info');
+
+// Function to trigger notification
+const triggerNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  notificationMessage.value = message;
+  notificationType.value = type;
+  showNotification.value = true;
+  // The Notification component itself will handle hiding after its duration
+};
 
 // Function to construct WebSocket URL
 const getWebSocketURL = (): string | null => {
@@ -145,11 +165,9 @@ const handleWebSocketMessage = (event: MessageEvent) => {
          if (payload.hasOwnProperty('timestamp')) {
              deviceToUpdate.lastBackupTimestamp = payload.timestamp;
          }
-    } else if (update.type === 'FRIENDS_EXPORT_STATUS_UPDATE') { // Example: Handle WebSocket updates for export status
+    } else if (update.type === 'FRIENDS_EXPORT_STATUS_UPDATE') { 
         if (payload.hasOwnProperty('status')) {
             const newStatus = payload.status;
-            // Update any relevant device properties related to friends export
-            // e.g., deviceToUpdate.lastExportStatus = newStatus;
             if (['EXPORTING_FRIENDS'].includes(newStatus)) {
                  exportInProgress[deviceToUpdate.id] = true;
             } else if (['COMPLETED_FRIENDS_EXPORT', 'FAILED_FRIENDS_EXPORT'].includes(newStatus)) {
@@ -158,9 +176,13 @@ const handleWebSocketMessage = (event: MessageEvent) => {
                       const exportedFriends = payload.data;
                       navigator.clipboard.writeText(exportedFriends).then(() => {
                           console.log('Exported friends copied to clipboard');
+                          triggerNotification('Exported friends copied to clipboard', 'success');
                       }).catch(err => {
                           console.error('Failed to copy exported friends to clipboard:', err);
+                          triggerNotification('Failed to copy exported friends to clipboard.', 'error');
                       });
+                  } else if (newStatus === 'FAILED_FRIENDS_EXPORT') {
+                    triggerNotification(payload.message || 'Failed to export friends.', 'error');
                   }
             } else {
                  exportInProgress[deviceToUpdate.id] = false;
@@ -248,11 +270,10 @@ const triggerBackup = async (deviceId: string) => {
   try {
     await requestDeviceBackup(deviceId);
     console.log(`Backup initiated for device ${deviceId}`);
-    // No alert needed, rely on WebSocket for status updates
-    // Optionally show a temporary "Request sent" notification
+    triggerNotification('Backup request sent.', 'info'); 
   } catch (err: any) {
     console.error(`Failed to initiate backup for device ${deviceId}:`, err);
-    alert(`Error starting backup: ${err.response?.data?.message || err.message}`);
+    triggerNotification(err.response?.data?.message || err.message || 'Error starting backup', 'error');
     backupInProgress[deviceId] = false; // Reset on error
   }
 };
@@ -262,15 +283,11 @@ const triggerFriendsExport = async (deviceId: string) => {
 
   exportInProgress[deviceId] = true; // Set immediately for UI feedback
   try {
-    // You'll need to define requestFriendsExport in @/api/deviceApi.ts
-    // It would typically make a POST request to an endpoint like /api/devices/{deviceId}/export-friends
     await requestFriendsExport(deviceId);
     console.log(`Friends export initiated for device ${deviceId}`);
-    // Optionally show a temporary "Request sent" notification
-    // Rely on WebSocket messages (e.g., 'FRIENDS_EXPORT_STATUS_UPDATE') to update UI and reset exportInProgress[deviceId]
   } catch (err: any) {
     console.error(`Failed to initiate friends export for device ${deviceId}:`, err);
-    alert(`Error starting friends export: ${err.response?.data?.message || err.message}`);
+    triggerNotification(err.response?.data?.message || err.message || 'Error starting friends export', 'error');
     exportInProgress[deviceId] = false; // Reset on error if no WebSocket update is expected for this failure
   }
 };
