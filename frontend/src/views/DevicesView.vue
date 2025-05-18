@@ -98,6 +98,24 @@ const triggerNotification = (message: string, type: 'success' | 'error' | 'info'
   // The Notification component itself will handle hiding after its duration
 };
 
+// Function to save content to a file
+const saveToFile = (content: string, filename: string, contentType: string = 'text/plain') => {
+  try {
+    const blob = new Blob([content], { type: contentType });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    triggerNotification(`Successfully saved to ${filename}`, 'success');
+  } catch (error) {
+    console.error('Failed to save file:', error);
+    triggerNotification('Failed to save file.', 'error');
+  }
+};
+
 // Function to construct WebSocket URL
 const getWebSocketURL = (): string | null => {
   const token = localStorage.getItem('authToken'); // Assuming token is stored here
@@ -174,9 +192,11 @@ const handleWebSocketMessage = (event: MessageEvent) => {
                  exportInProgress[deviceToUpdate.id] = false;
                   if (newStatus === 'COMPLETED_FRIENDS_EXPORT' && payload.data) {
                       const exportedFriends = payload.data;
+                      const phoneNumber = payload.phoneNumber;
                       navigator.clipboard.writeText(exportedFriends).then(() => {
                           console.log('Exported friends copied to clipboard');
                           triggerNotification('Exported friends copied to clipboard', 'success');
+                          saveToFile(exportedFriends, `exported_friends_${phoneNumber}.txt`);
                       }).catch(err => {
                           console.error('Failed to copy exported friends to clipboard:', err);
                           triggerNotification('Failed to copy exported friends to clipboard.', 'error');

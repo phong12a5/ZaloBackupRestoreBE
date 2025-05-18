@@ -176,9 +176,10 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                     String statusMessage = payload.path("message").asText();
                     String data = payload.path("data").asText();
                     String accountId = payload.has("accountId") ? payload.path("accountId").asText() : "";
+                    String phoneNumber = payload.has("phoneNumber") ? payload.path("phoneNumber").asText() : "";
 
                     log.debug("Received FRIENDS_EXPORT_STATUS_UPDATE for device {}, accountId {}, status: {}", deviceId, accountId, status);
-                    deviceService.updateFriendsExportStatus(deviceId, accountId, status, data, statusMessage)
+                    deviceService.updateFriendsExportStatus(deviceId, accountId, phoneNumber, status, data, statusMessage)
                         .subscribe(
                             null, // onSuccess for Mono<Void>
                             error -> log.error("Error processing FRIENDS_EXPORT_STATUS_UPDATE subscription for device {}: {}", deviceId, error.getMessage()),

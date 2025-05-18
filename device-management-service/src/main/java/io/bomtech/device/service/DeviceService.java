@@ -230,7 +230,7 @@ public class DeviceService {
     }
 
 
-    public Mono<Void> updateFriendsExportStatus(String deviceId, String zaloAccountId, String status, String data, String message) {
+    public Mono<Void> updateFriendsExportStatus(String deviceId, String zaloAccountId, String phoneNumber, String status, String data, String message) {
         log.info("Updating friends export status for device {}: AccountId={}, Status={}, Message='{}'", deviceId, zaloAccountId, status, message);
         return deviceRepository.findById(deviceId)
             .flatMap(device -> {
@@ -240,6 +240,7 @@ public class DeviceService {
                     "payload", Map.of(
                         "deviceId", device.getId(),
                         "accountId", zaloAccountId,
+                        "phoneNumber", phoneNumber,
                         "status", status,
                         "data", data,
                         "message", message,
