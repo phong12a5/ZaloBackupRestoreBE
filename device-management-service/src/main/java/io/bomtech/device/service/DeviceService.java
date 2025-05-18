@@ -235,16 +235,18 @@ public class DeviceService {
         return deviceRepository.findById(deviceId)
             .flatMap(device -> {
                 log.info("Device {} found. Updating friends export status to: {}. AccountId: {}", deviceId, status, zaloAccountId);
-                // Notify web clients
-                Map<String, Object> updatePayload = Map.of(
+                Map<String, Object> update = Map.of(
                     "type", "FRIENDS_EXPORT_STATUS_UPDATE",
-                    "deviceId", device.getId(),
-                    "accountId", zaloAccountId,
-                    "status", status,
-                    "data", data,
-                    "message", message
+                    "payload", Map.of(
+                        "deviceId", device.getId(),
+                        "accountId", zaloAccountId,
+                        "status", status,
+                        "data", data,
+                        "message", message,
+                        "timestamp", Instant.now()
+                    )
                 );
-                webUpdatesWebSocketHandler.sendUpdateToUser(device.getUserId(), updatePayload);
+                webUpdatesWebSocketHandler.sendUpdateToUser(device.getUserId(), update);
                 return deviceRepository.save(device);
             })
             .then() // Convert Mono<Device> from save() to Mono<Void>
