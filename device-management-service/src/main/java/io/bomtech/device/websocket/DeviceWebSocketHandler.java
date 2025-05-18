@@ -129,7 +129,7 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
             DeviceService deviceService = applicationContext.getBean(DeviceService.class);
 
             switch (messageType) {
-                case "DEVICE_STATUS_UPDATE":
+                case "DEVICE_STATUS_UPDATE": {
                     if (payload.has("phoneNumber")) {
                         String accountId = payload.path("accountId").asText();
                         String phoneNumber = payload.path("phoneNumber").asText();
@@ -140,9 +140,10 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                                 error -> log.error("Error processing accountId update for device {}: {}", deviceId, error.getMessage())
                             );
                     }
+                }
                     break;
 
-                case "BACKUP_STATUS_UPDATE":
+                case "BACKUP_STATUS_UPDATE": {
                     String status = payload.path("status").asText();
                     String statusMessage = payload.path("message").asText();
                     String accountId = payload.has("accountId") ? payload.path("accountId").asText() : "";
@@ -168,6 +169,22 @@ public class DeviceWebSocketHandler implements WebSocketHandler {
                             device -> log.info("Processed BACKUP_STATUS_UPDATE for device {}, status: {}", deviceId, status),
                             error -> log.error("Error processing BACKUP_STATUS_UPDATE for device {}: {}", deviceId, error.getMessage())
                         );
+                }
+                    break;
+                case "FRIENDS_EXPORT_STATUS_UPDATE": {
+                    String status = payload.path("status").asText();
+                    String statusMessage = payload.path("message").asText();
+                    String data = payload.path("data").asText();
+                    String accountId = payload.has("accountId") ? payload.path("accountId").asText() : "";
+
+                    log.debug("Received FRIENDS_EXPORT_STATUS_UPDATE for device {}, accountId {}, status: {}", deviceId, accountId, status);
+                    deviceService.updateFriendsExportStatus(deviceId, accountId, status, data, statusMessage)
+                        .subscribe(
+                            null, // onSuccess for Mono<Void>
+                            error -> log.error("Error processing FRIENDS_EXPORT_STATUS_UPDATE subscription for device {}: {}", deviceId, error.getMessage()),
+                            () -> log.debug("FRIENDS_EXPORT_STATUS_UPDATE processing chain completed for device {}", deviceId)
+                        );
+                }
                     break;
                 default:
                     log.warn("Received unknown message type '{}' from device {}: {}", messageType, deviceId, message);

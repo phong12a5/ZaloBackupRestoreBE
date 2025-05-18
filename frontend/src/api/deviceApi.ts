@@ -18,6 +18,11 @@ export const requestDeviceBackup = async (deviceId: string): Promise<void> => {
   await apiClient.post(`/api/devices/${deviceId}/backup`);
 };
 
+// Yêu cầu export friends
+export const requestFriendsExport = async (deviceId: string): Promise<void> => {
+  await apiClient.post(`/api/devices/${deviceId}/export-friends`);
+};
+
 // Lấy danh sách tài khoản đã backup
 export const getMyBackedUpAccounts = async (): Promise<BackedUpAccount[]> => {
   const response = await apiClient.get<BackedUpAccount[]>('/api/devices/user/me/accounts');

@@ -142,6 +142,20 @@ public class DeviceService {
                 .doOnError(e -> log.error("Failed to send backup command to device {}: {}", deviceId, e.getMessage()));
     }
 
+    public Mono<Void> initiateFriendsExport(String userId, String deviceId) {
+        log.info("Initiating friends export for device {} by user {}", deviceId, userId);
+        // Check if device is connected
+        if (!webSocketHandler.isDeviceConnected(deviceId)) {
+            log.warn("Device {} is not connected. Cannot initiate friends export.", deviceId);
+            return Mono.error(new IllegalStateException("Device not connected"));
+        }
+        // Send command to device via WebSocket
+        String backupCommand = "{\"command\": \"export_friends\"}";
+        return webSocketHandler.sendCommandToDevice(deviceId, backupCommand)
+                .doOnSuccess(v -> log.info("Friends export command sent to device {}", deviceId))
+                .doOnError(error -> log.error("Failed to send friends export command to device {}: {}", deviceId, error.getMessage()));
+    }
+
     public Mono<BackedUpAccount> saveBackedUpAccount(String deviceId, String userId, String zaloAccountId, String zaloName, String zaloPhone, String backupFilePath) {
          log.info("Saving backed up account info for device {}, userId {}, accountId {}", deviceId, userId, zaloAccountId);
 
@@ -215,6 +229,27 @@ public class DeviceService {
                  .doOnError(e -> log.error("Failed to update backup status for device {}: {}", deviceId, e.getMessage()));
     }
 
+
+    public Mono<Void> updateFriendsExportStatus(String deviceId, String zaloAccountId, String status, String data, String message) {
+        log.info("Updating friends export status for device {}: AccountId={}, Status={}, Message='{}'", deviceId, zaloAccountId, status, message);
+        return deviceRepository.findById(deviceId)
+            .flatMap(device -> {
+                log.info("Device {} found. Updating friends export status to: {}. AccountId: {}", deviceId, status, zaloAccountId);
+                // Notify web clients
+                Map<String, Object> updatePayload = Map.of(
+                    "type", "FRIENDS_EXPORT_STATUS_UPDATE",
+                    "deviceId", device.getId(),
+                    "accountId", zaloAccountId,
+                    "status", status,
+                    "data", data,
+                    "message", message
+                );
+                webUpdatesWebSocketHandler.sendUpdateToUser(device.getUserId(), updatePayload);
+                return deviceRepository.save(device);
+            })
+            .then() // Convert Mono<Device> from save() to Mono<Void>
+            .doOnError(e -> log.error("Error updating friends export status for device {}: {}", deviceId, e.getMessage()));
+    }
     /**
      * Updates only the activeAccountId for a given device and notifies web clients.
      *

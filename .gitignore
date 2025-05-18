@@ -2,3 +2,5 @@
 mongo-data/
 target/
 **/.env*
+
+nginx-proxy/letsencrypt

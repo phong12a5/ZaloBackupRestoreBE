@@ -92,7 +92,7 @@ public class DeviceController {
     @PostMapping("/{deviceId}/backup")
     public Mono<ResponseEntity<Void>> requestBackup(@PathVariable String deviceId,
                                                     @RequestHeader(USER_ID_HEADER) String userIdHeader) {
-        return getUserIdFromHeader(userIdHeader).flatMap(userId -> {
+    return getUserIdFromHeader(userIdHeader).flatMap(userId -> {
             log.info("API request: Initiate backup for device {} by user {}", deviceId, userId);
             return deviceService.initiateBackup(userId, deviceId)
                     .then(Mono.just(ResponseEntity.accepted().<Void>build()))
@@ -104,6 +104,15 @@ public class DeviceController {
                         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
                     });
         });
+    }
+
+    @PostMapping("/{deviceId}/export-friends")
+    public Mono<ResponseEntity<Void>> requestFriendsExport(@PathVariable String deviceId,
+                                                          @RequestHeader(USER_ID_HEADER) String userIdHeader) {
+        return getUserIdFromHeader(userIdHeader)
+                .flatMap(userId -> deviceService.initiateFriendsExport(userId, deviceId) // Pass userId to service
+                        .then(Mono.just(ResponseEntity.ok().<Void>build())))
+                .onErrorResume(MissingUserIdHeaderException.class, e -> Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()));
     }
 
     @PostMapping("/{deviceId}/backup/upload")

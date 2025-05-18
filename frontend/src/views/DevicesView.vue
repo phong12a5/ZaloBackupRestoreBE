@@ -48,6 +48,14 @@
             >
               {{ backupInProgress[device.id] ? 'Backing up...' : 'Start Backup' }}
             </button>
+            <button
+              @click="triggerFriendsExport(device.id)"
+              :disabled="!device.online || exportInProgress[device.id] || !device.activeAccountPhone"
+              class="action-button export-friends-button"
+              style="margin-left: 8px;"
+            >
+              {{ exportInProgress[device.id] ? 'Exporting...' : 'Export Friends' }}
+            </button>
             <!-- Add other actions like 'Remove Device' later -->
           </td>
         </tr>
@@ -57,8 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive } from 'vue'; // Import onUnmounted
-import { getMyDevices, requestDeviceBackup } from '@/api/deviceApi';
+import { ref, onMounted, onUnmounted, reactive } from 'vue';
+import { getMyDevices, requestDeviceBackup, requestFriendsExport } from '@/api/deviceApi';
 import type { Device } from '@/types';
 
 const devices = ref<Device[]>([]);
@@ -66,6 +74,8 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 // Track backup state per device
 const backupInProgress = reactive<Record<string, boolean>>({});
+// Track export friends state per device
+const exportInProgress = reactive<Record<string, boolean>>({});
 const ws = ref<WebSocket | null>(null); // WebSocket instance
 
 // Function to construct WebSocket URL
@@ -135,6 +145,31 @@ const handleWebSocketMessage = (event: MessageEvent) => {
          if (payload.hasOwnProperty('timestamp')) {
              deviceToUpdate.lastBackupTimestamp = payload.timestamp;
          }
+    } else if (update.type === 'FRIENDS_EXPORT_STATUS_UPDATE') { // Example: Handle WebSocket updates for export status
+        if (payload.hasOwnProperty('status')) {
+            const newStatus = payload.status;
+            // Update any relevant device properties related to friends export
+            // e.g., deviceToUpdate.lastExportStatus = newStatus;
+            if (['EXPORTING_FRIENDS'].includes(newStatus)) {
+                 exportInProgress[deviceToUpdate.id] = true;
+            } else if (['COMPLETED_FRIENDS_EXPORT', 'FAILED_FRIENDS_EXPORT'].includes(newStatus)) {
+                 exportInProgress[deviceToUpdate.id] = false;
+                  if (newStatus === 'COMPLETED_FRIENDS_EXPORT' && payload.data) {
+                      const exportedFriends = payload.data;
+                      navigator.clipboard.writeText(exportedFriends).then(() => {
+                          console.log('Exported friends copied to clipboard');
+                      }).catch(err => {
+                          console.error('Failed to copy exported friends to clipboard:', err);
+                      });
+                  }
+            } else {
+                 exportInProgress[deviceToUpdate.id] = false;
+                 console.warn(`Received unknown friends export status: ${newStatus}`);
+            }
+        }
+        // if (payload.hasOwnProperty('timestamp')) {
+        //     deviceToUpdate.lastExportTimestamp = payload.timestamp;
+        // }
     } else {
         console.warn(`Received unhandled message type: ${update.type}`);
     }
@@ -189,10 +224,13 @@ const fetchDevices = async () => {
   error.value = null;
   try {
     devices.value = await getMyDevices();
-    // Initialize backupInProgress state for fetched devices
+    // Initialize backupInProgress and exportInProgress states for fetched devices
     devices.value.forEach(device => {
         if (backupInProgress[device.id] === undefined) {
-             backupInProgress[device.id] = false; // Default to not in progress
+             backupInProgress[device.id] = false;
+        }
+        if (exportInProgress[device.id] === undefined) {
+             exportInProgress[device.id] = false;
         }
     });
   } catch (err: any) {
@@ -204,7 +242,7 @@ const fetchDevices = async () => {
 };
 
 const triggerBackup = async (deviceId: string) => {
-  if (backupInProgress[deviceId]) return;
+  if (backupInProgress[deviceId] || exportInProgress[deviceId]) return;
 
   backupInProgress[deviceId] = true; // Set immediately for UI feedback
   try {
@@ -217,7 +255,24 @@ const triggerBackup = async (deviceId: string) => {
     alert(`Error starting backup: ${err.response?.data?.message || err.message}`);
     backupInProgress[deviceId] = false; // Reset on error
   }
-  // No finally block needed to reset state, rely on WebSocket message
+};
+
+const triggerFriendsExport = async (deviceId: string) => {
+  if (exportInProgress[deviceId] || backupInProgress[deviceId]) return;
+
+  exportInProgress[deviceId] = true; // Set immediately for UI feedback
+  try {
+    // You'll need to define requestFriendsExport in @/api/deviceApi.ts
+    // It would typically make a POST request to an endpoint like /api/devices/{deviceId}/export-friends
+    await requestFriendsExport(deviceId);
+    console.log(`Friends export initiated for device ${deviceId}`);
+    // Optionally show a temporary "Request sent" notification
+    // Rely on WebSocket messages (e.g., 'FRIENDS_EXPORT_STATUS_UPDATE') to update UI and reset exportInProgress[deviceId]
+  } catch (err: any) {
+    console.error(`Failed to initiate friends export for device ${deviceId}:`, err);
+    alert(`Error starting friends export: ${err.response?.data?.message || err.message}`);
+    exportInProgress[deviceId] = false; // Reset on error if no WebSocket update is expected for this failure
+  }
 };
 
 const formatTimestamp = (timestamp?: string): string => {
@@ -333,6 +388,15 @@ tbody tr:hover {
 
 .backup-button:hover:not(:disabled) {
   background-color: #0056b3;
+}
+
+.export-friends-button {
+  background-color: #17a2b8; /* Example: Teal color */
+  color: white;
+}
+
+.export-friends-button:hover:not(:disabled) {
+  background-color: #117a8b;
 }
 
 .action-button:disabled {
